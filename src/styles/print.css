@@ -1,0 +1,11 @@
+@media print {
+  body { overflow: visible; background: #fff; }
+  .header,
+  .sidebar,
+  .tab-bar,
+  .sidebar-toggle-btn,
+  .no-print { display: none !important; }
+  .app-body, .app-main, .app-shell { height: auto; overflow: visible; display: block; }
+  .tab-panel { padding: 0; overflow: visible; }
+  .card { break-inside: avoid; box-shadow: none; border-color: var(--panel-border-strong); }
+}

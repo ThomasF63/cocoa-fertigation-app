@@ -1,0 +1,48 @@
+/* Ekodama design tokens, ported verbatim from the
+   Peirot x Mars AF Experiment sampling_plan_diagram.html reference. */
+
+:root {
+  --ek-root:       #F7F5F0;
+  --ek-soil:       #3B322C;
+  --ek-soil-dark:  #2A231E;
+  --ek-soil-mid:   #5a4b41;
+  --ek-soil-warm:  #8a6c52;
+  --ek-soil-sand:  #E8DFD2;
+  --ek-water:      #6B9AC4;
+  --ek-stem:       #657D58;
+  --ek-stem-dark:  #3E5233;
+  --ek-seed:       #E89B48;
+  --ek-terracotta: #C46B42;
+  --ek-berry:      #B5678A;
+  --ek-slate:      #6C7A8A;
+  --ek-slate-dark: #424E5C;
+
+  /* Surface roles */
+  --bg:             var(--ek-root);
+  --panel-bg:       #FFFFFF;
+  --panel-border:   rgba(59, 50, 44, 0.08);
+  --panel-border-strong: rgba(59, 50, 44, 0.20);
+  --text-primary:   var(--ek-soil);
+  --text-secondary: var(--ek-soil-mid);
+  --text-muted:     rgba(59, 50, 44, 0.55);
+
+  /* Soil transparency helpers */
+  --soil-04: rgba(59, 50, 44, 0.04);
+  --soil-08: rgba(59, 50, 44, 0.08);
+  --soil-12: rgba(59, 50, 44, 0.12);
+  --soil-20: rgba(59, 50, 44, 0.20);
+
+  /* Status */
+  --ok:      var(--ek-stem);
+  --warn:    var(--ek-seed);
+  --danger:  var(--ek-terracotta);
+
+  --font-family:   'Figtree', system-ui, sans-serif;
+  --font-mono:     'PT Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --sidebar-width:    310px;
+  --header-height:    48px;
+  --radius-card:      10px;
+  --radius-control:   6px;
+  --shadow-tooltip:   0 6px 20px rgba(42, 35, 30, 0.18);
+}
