@@ -20,6 +20,7 @@ export const HEADERS: Record<StoreName | "soil_stocks" | "plot_summary", string[
   trees: ["tree_id","plot_id","tree_number_in_plot","tag_id","tagged_date","notes"],
   soil_samples: [
     "sample_id","plot_id","depth_label","depth_top_cm","depth_bottom_cm",
+    "n_subsamples","compositing_pattern",
     "sampling_date","sampler","moisture_visual","notes",
   ],
   bd_rings: [
@@ -35,7 +36,7 @@ export const HEADERS: Record<StoreName | "soil_stocks" | "plot_summary", string[
   ],
   leaf_composites: [
     "sample_id","plot_id","sampling_date",
-    "n_leaves_combined","fresh_weight_g","dry_weight_g",
+    "n_trees_sampled","n_leaves_combined","fresh_weight_g","dry_weight_g",
     "observer","notes",
   ],
   soil_analytics: [
@@ -124,6 +125,8 @@ function rowToSoilSample(r: Record<string, string>): SoilSample {
     depth_label: r.depth_label,
     depth_top_cm: Number(r.depth_top_cm),
     depth_bottom_cm: Number(r.depth_bottom_cm),
+    n_subsamples: numOrUndef(r.n_subsamples),
+    compositing_pattern: strOrUndef(r.compositing_pattern),
     sampling_date: strOrUndef(r.sampling_date),
     sampler: strOrUndef(r.sampler),
     moisture_visual: strOrUndef(r.moisture_visual),
@@ -170,6 +173,7 @@ function rowToLeafComposite(r: Record<string, string>): LeafComposite {
     sample_id: r.sample_id,
     plot_id: r.plot_id,
     sampling_date: strOrUndef(r.sampling_date),
+    n_trees_sampled: numOrUndef(r.n_trees_sampled),
     n_leaves_combined: numOrUndef(r.n_leaves_combined),
     fresh_weight_g: numOrUndef(r.fresh_weight_g),
     dry_weight_g: numOrUndef(r.dry_weight_g),

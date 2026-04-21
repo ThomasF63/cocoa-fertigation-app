@@ -1,6 +1,6 @@
 // Deterministic generation of the 48-plot factorial and 576 central trees.
-// Layout on screen is an arbitrary but consistent 8 (blocks) x 6 (treatments)
-// grid, reshaped to two rows of 4 blocks for balance on wide screens.
+// Each plot holds 12 central cocoa trees in a 2 x 6 double row (mirrors the
+// field planting pattern). Blocks are arranged 2 x 4 on wide screens.
 
 import {
   DOSE_N_KG_HA_YR,
@@ -11,10 +11,17 @@ import {
   type Plot,
   type Tree,
 } from "../types/design";
+import {
+  ALL_BLOCKS,
+  ALL_DOSES,
+  ALL_GENOTYPES,
+  DEFAULT_PLAN,
+  type SamplingPlan,
+} from "../types/plan";
 
-const BLOCKS: BlockNumber[] = [1, 2, 3, 4, 5, 6, 7, 8];
-const GENOTYPES: GenotypeCode[] = ["CCN51", "PS1319"];
-const DOSES: DoseCode[] = ["L", "M", "H"];
+const BLOCKS: BlockNumber[] = ALL_BLOCKS;
+const GENOTYPES: GenotypeCode[] = ALL_GENOTYPES;
+const DOSES: DoseCode[] = ALL_DOSES;
 
 export function plotId(block: BlockNumber, geno: GenotypeCode, dose: DoseCode): string {
   return `B${block}_${geno}_${dose}`;
@@ -24,11 +31,12 @@ export function treeId(plot_id: string, treeNumber: number): string {
   return `${plot_id}_T${String(treeNumber).padStart(2, "0")}`;
 }
 
-export function generatePlots(): Plot[] {
+export function generatePlots(plan: SamplingPlan = DEFAULT_PLAN): Plot[] {
+  const blocks = BLOCKS.slice(0, plan.nBlocks);
   const plots: Plot[] = [];
-  for (const block of BLOCKS) {
-    for (const geno of GENOTYPES) {
-      for (const dose of DOSES) {
+  for (const block of blocks) {
+    for (const geno of plan.genotypes) {
+      for (const dose of plan.doses) {
         plots.push({
           plot_id: plotId(block, geno, dose),
           block,
@@ -38,7 +46,7 @@ export function generatePlots(): Plot[] {
           n_dose_kg_ha_yr: DOSE_N_KG_HA_YR[dose],
           rootstock: "VB 1151",
           trees_per_plot: 96,
-          measurement_trees_n: 12,
+          measurement_trees_n: plan.treesPerPlot,
         });
       }
     }
@@ -96,15 +104,15 @@ export interface LayoutConfig {
 }
 
 export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
-  blockGridCols: 4,
+  blockGridCols: 2,
   plotsPerBlockCols: 3,
   plotsPerBlockRows: 2,
-  plotW: 120,
-  plotH: 96,
-  blockGap: 24,
-  plotGap: 6,
-  treeMargin: 10,
-  treeRadius: 4,
+  plotW: 240,
+  plotH: 90,
+  blockGap: 30,
+  plotGap: 8,
+  treeMargin: 18,
+  treeRadius: 5,
 };
 
 export function computeFieldLayout(
@@ -135,12 +143,15 @@ export function computeFieldLayout(
     const x = blockOriginX + doseCol * (plotW + plotGap);
     const y = blockOriginY + genotypeRow * (plotH + plotGap);
 
-    // 12 trees: 3 rows x 4 cols
-    const rows = 3, cols = 4;
+    // 12 trees: 2 rows x 6 cols (double row, as planted in the field).
+    // Rows are shifted toward the bottom of the plot to leave headroom at the
+    // top for the plot label.
+    const rows = 2, cols = 6;
+    const labelReserve = 32;
     const usableW = plotW - 2 * treeMargin;
-    const usableH = plotH - 2 * treeMargin;
+    const usableH = plotH - treeMargin - labelReserve;
     const dx = usableW / (cols - 1);
-    const dy = usableH / (rows - 1);
+    const dy = rows > 1 ? usableH / (rows - 1) : 0;
 
     const trees = [] as { tree_id: string; cx: number; cy: number }[];
     let n = 1;
@@ -149,7 +160,7 @@ export function computeFieldLayout(
         trees.push({
           tree_id: treeId(p.plot_id, n),
           cx: x + treeMargin + c * dx,
-          cy: y + treeMargin + r * dy,
+          cy: y + labelReserve + r * dy,
         });
         n++;
       }

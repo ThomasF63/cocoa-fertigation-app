@@ -1,25 +1,27 @@
 // Treatment palette for visualisation. Muted Ekodama tones, with genotype
 // driving fill (stem vs berry) and dose driving border weight / saturation.
+// Values are CSS custom-property references so SVG fills/strokes adapt to the
+// active theme (light / dark / contrast). Dark-mode overrides live in tokens.css.
 
 import type { GenotypeCode, DoseCode } from "../types/design";
 
 export const TOKENS = {
-  soil: "#3B322C",
-  soilDark: "#2A231E",
-  root: "#F7F5F0",
-  stem: "#657D58",
-  stemDark: "#3E5233",
-  berry: "#B5678A",
-  berryDark: "#7A4059",
-  seed: "#E89B48",
-  terracotta: "#C46B42",
-  water: "#6B9AC4",
-  slate: "#6C7A8A",
+  soil:       "var(--text-primary)",
+  soilDark:   "var(--text-primary)",
+  root:       "var(--ek-root)",
+  stem:       "var(--ek-stem)",
+  stemDark:   "var(--ek-stem-dark)",
+  berry:      "var(--ek-berry)",
+  berryDark:  "var(--ek-berry-dark)",
+  seed:       "var(--ek-seed)",
+  terracotta: "var(--ek-terracotta)",
+  water:      "var(--ek-water)",
+  slate:      "var(--ek-slate)",
 } as const;
 
 export const GENOTYPE_FILL: Record<GenotypeCode, string> = {
-  CCN51: "rgba(101, 125, 88, 0.22)",
-  PS1319: "rgba(181, 103, 138, 0.22)",
+  CCN51:  "color-mix(in oklch, var(--ek-stem) 22%, transparent)",
+  PS1319: "color-mix(in oklch, var(--ek-berry) 22%, transparent)",
 };
 
 export const GENOTYPE_STROKE: Record<GenotypeCode, string> = {

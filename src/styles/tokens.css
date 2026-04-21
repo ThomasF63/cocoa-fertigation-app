@@ -1,48 +1,107 @@
-/* Ekodama design tokens, ported verbatim from the
-   Peirot x Mars AF Experiment sampling_plan_diagram.html reference. */
+/* Ekodama design tokens — OKLCH palette, refined for field-science precision */
 
 :root {
-  --ek-root:       #F7F5F0;
-  --ek-soil:       #3B322C;
-  --ek-soil-dark:  #2A231E;
-  --ek-soil-mid:   #5a4b41;
-  --ek-soil-warm:  #8a6c52;
-  --ek-soil-sand:  #E8DFD2;
-  --ek-water:      #6B9AC4;
-  --ek-stem:       #657D58;
-  --ek-stem-dark:  #3E5233;
-  --ek-seed:       #E89B48;
-  --ek-terracotta: #C46B42;
-  --ek-berry:      #B5678A;
-  --ek-slate:      #6C7A8A;
-  --ek-slate-dark: #424E5C;
+  /* ── PALETTE ─────────────────────────────────────────────────────────── */
+  /* All hues tinted toward h≈50 (warm amber/brown family) */
+  --ek-root:        oklch(97.5% 0.007  68);   /* warm cream background */
+  --ek-soil:        oklch(27%   0.022  50);   /* deep brown, primary text */
+  --ek-soil-dark:   oklch(21%   0.018  50);   /* darkest brown, header bg */
+  --ek-soil-mid:    oklch(42%   0.022  50);   /* mid brown, secondary text */
+  --ek-soil-warm:   oklch(57%   0.032  50);   /* warm brown accent */
+  --ek-soil-sand:   oklch(91%   0.016  68);   /* warm sand */
+  --ek-water:       oklch(63%   0.072 240);   /* muted steel blue */
+  --ek-stem:        oklch(52%   0.082 145);   /* earthy sage green */
+  --ek-stem-dark:   oklch(38%   0.072 145);   /* dark sage */
+  --ek-seed:        oklch(73%   0.105  65);   /* warm amber */
+  --ek-terracotta:  oklch(60%   0.095  37);   /* muted terracotta */
+  --ek-berry:       oklch(55%   0.075 340);   /* muted mauve */
+  --ek-berry-dark:  oklch(32%   0.075 340);   /* dark mauve, for strokes */
+  --ek-slate:       oklch(55%   0.020 240);   /* blue-grey */
+  --ek-slate-dark:  oklch(38%   0.020 240);   /* dark blue-grey */
 
-  /* Surface roles */
-  --bg:             var(--ek-root);
-  --panel-bg:       #FFFFFF;
-  --panel-border:   rgba(59, 50, 44, 0.08);
-  --panel-border-strong: rgba(59, 50, 44, 0.20);
-  --text-primary:   var(--ek-soil);
-  --text-secondary: var(--ek-soil-mid);
-  --text-muted:     rgba(59, 50, 44, 0.55);
+  /* Soil depth band colours (surface → deep). Used in Plan/Layout diagrams. */
+  --ek-depth-1:     oklch(78%   0.022  75);
+  --ek-depth-2:     oklch(65%   0.035  65);
+  --ek-depth-3:     oklch(52%   0.040  60);
+  --ek-depth-4:     oklch(38%   0.040  55);
 
-  /* Soil transparency helpers */
-  --soil-04: rgba(59, 50, 44, 0.04);
-  --soil-08: rgba(59, 50, 44, 0.08);
-  --soil-12: rgba(59, 50, 44, 0.12);
-  --soil-20: rgba(59, 50, 44, 0.20);
+  /* ── SURFACE ROLES ───────────────────────────────────────────────────── */
+  --bg:                   var(--ek-root);
+  --panel-bg:             oklch(100% 0 0);
+  --panel-border:         oklch(27% 0.022 50 / 0.09);
+  --panel-border-strong:  oklch(27% 0.022 50 / 0.22);
+  --text-primary:         var(--ek-soil);
+  --text-secondary:       var(--ek-soil-mid);
+  --text-muted:           oklch(27% 0.022 50 / 0.62);
 
-  /* Status */
+  /* ── TRANSPARENT TINTS ───────────────────────────────────────────────── */
+  --soil-04:  oklch(27% 0.022 50 / 0.04);
+  --soil-08:  oklch(27% 0.022 50 / 0.08);
+  --soil-12:  oklch(27% 0.022 50 / 0.12);
+  --soil-20:  oklch(27% 0.022 50 / 0.20);
+
+  /* ── STATUS ──────────────────────────────────────────────────────────── */
   --ok:      var(--ek-stem);
   --warn:    var(--ek-seed);
   --danger:  var(--ek-terracotta);
 
-  --font-family:   'Figtree', system-ui, sans-serif;
-  --font-mono:     'PT Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* ── TYPOGRAPHY ──────────────────────────────────────────────────────── */
+  --font-family: 'Archivo', system-ui, sans-serif;
+  --font-mono:   'Azeret Mono', ui-monospace, Menlo, Consolas, monospace;
 
-  --sidebar-width:    310px;
-  --header-height:    48px;
-  --radius-card:      10px;
-  --radius-control:   6px;
-  --shadow-tooltip:   0 6px 20px rgba(42, 35, 30, 0.18);
+  /* ── SPACING SCALE (4pt base) ────────────────────────────────────────── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* ── LAYOUT ──────────────────────────────────────────────────────────── */
+  --sidebar-width:   320px;
+  --header-height:    52px;
+  --radius-card:       8px;
+  --radius-control:    5px;
+  --shadow-tooltip:   0 6px 20px oklch(21% 0.018 50 / 0.18);
+}
+
+/* ── DARK THEME ────────────────────────────────────────────────────────── */
+/* Warm dark palette — flips surfaces and text while keeping brand accents */
+[data-theme="dark"] {
+  --bg:                   oklch(18% 0.012 50);
+  --panel-bg:             oklch(23% 0.014 50);
+  --panel-border:         oklch(97% 0.007 68 / 0.09);
+  --panel-border-strong:  oklch(97% 0.007 68 / 0.22);
+  --text-primary:         oklch(95% 0.005 68);
+  --text-secondary:       oklch(76% 0.010 68);
+  --text-muted:           oklch(60% 0.010 68);
+
+  --soil-04:  oklch(97% 0.007 68 / 0.05);
+  --soil-08:  oklch(97% 0.007 68 / 0.09);
+  --soil-12:  oklch(97% 0.007 68 / 0.15);
+  --soil-20:  oklch(97% 0.007 68 / 0.24);
+
+  /* Brighten accent palette so strokes, dots, and chart lines stay legible.
+     Kept below ~70% so filled buttons with cream/white text retain contrast. */
+  --ek-stem:        oklch(68% 0.095 145);
+  --ek-stem-dark:   oklch(80% 0.085 145);
+  --ek-berry:       oklch(70% 0.085 340);
+  --ek-berry-dark:  oklch(80% 0.085 340);
+  --ek-water:       oklch(68% 0.090 240);
+  --ek-seed:        oklch(78% 0.120  65);
+  --ek-terracotta:  oklch(66% 0.110  37);
+  --ek-slate:       oklch(72% 0.025 240);
+
+  /* Lift depth bands so they remain visible over dark panels. */
+  --ek-depth-1:     oklch(86% 0.022  75);
+  --ek-depth-2:     oklch(75% 0.040  68);
+  --ek-depth-3:     oklch(64% 0.050  60);
+  --ek-depth-4:     oklch(52% 0.045  55);
+
+  /* Keep header darker than the body in dark mode */
+  --ek-soil-dark:   oklch(13% 0.012 50);
+
+  --shadow-tooltip: 0 6px 20px oklch(0% 0 0 / 0.55);
 }

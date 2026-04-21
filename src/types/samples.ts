@@ -8,6 +8,8 @@ export interface SoilSample {
   depth_label: string;       // "0-10" ...
   depth_top_cm: number;
   depth_bottom_cm: number;
+  n_subsamples?: number;     // number of field subsamples composited
+  compositing_pattern?: string; // e.g. "W", "X", "grid", "random"
   sampling_date?: string;    // ISO
   sampler?: string;
   moisture_visual?: string;
@@ -33,6 +35,7 @@ export interface LeafComposite {
   sample_id: string;         // {plot_id}_LEAF
   plot_id: string;
   sampling_date?: string;
+  n_trees_sampled?: number;  // number of trees leaves were drawn from
   n_leaves_combined?: number;
   fresh_weight_g?: number;
   dry_weight_g?: number;

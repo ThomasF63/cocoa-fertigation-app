@@ -1,4 +1,4 @@
-export type TabKey = "overview" | "layout" | "entry" | "results" | "sync";
+export type TabKey = "overview" | "plan" | "protocol" | "layout" | "entry" | "results" | "sync";
 
 interface Props {
   active: TabKey;
@@ -7,6 +7,8 @@ interface Props {
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "overview", label: "Overview" },
+  { key: "plan",     label: "Sampling plan" },
+  { key: "protocol", label: "Protocol" },
   { key: "layout",   label: "Layout" },
   { key: "entry",    label: "Data entry" },
   { key: "results",  label: "Results" },

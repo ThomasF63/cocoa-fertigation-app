@@ -1,5 +1,12 @@
 // Design-side types for the MCCS 48-plot factorial.
 
+export interface DepthLayer {
+  code: string;   // positional: "D1" = first layer, "D2" = second, etc.
+  label: string;  // display range, e.g. "0-10"
+  top: number;
+  bottom: number;
+}
+
 export type GenotypeCode = "CCN51" | "PS1319";
 export type GenotypeLabel = "CCN 51" | "PS 13.19";
 export type DoseCode = "L" | "M" | "H";

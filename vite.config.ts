@@ -4,7 +4,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // For GitHub Pages at https://<user>.github.io/<repo>/, the assets must be
 // served under the repo path. BASE_PATH can be overridden at build time.
-const BASE_PATH = process.env.BASE_PATH ?? "/mccs-fertigation-app/";
+const BASE_PATH = process.env.BASE_PATH ?? "/cocoa-fertigation-app/";
 
 export default defineConfig({
   base: BASE_PATH,

@@ -1,14 +1,14 @@
 // Sample-ID generation. Matches data/build_data_templates.js exactly.
 
-import { DEPTHS, type DepthCode } from "../types/design";
 import type { Plot } from "../types/design";
 import type { SoilSample, BDRing, LeafComposite, NminSample } from "../types/samples";
+import { DEFAULT_PLAN, type SamplingPlan } from "../types/plan";
 
-export function soilSampleId(plot_id: string, depthCode: DepthCode): string {
+export function soilSampleId(plot_id: string, depthCode: string): string {
   return `${plot_id}_${depthCode}`;
 }
 
-export function bdRingId(ringNumber: number, depthCode: DepthCode): string {
+export function bdRingId(ringNumber: number, depthCode: string): string {
   return `BD${String(ringNumber).padStart(2, "0")}_${depthCode}`;
 }
 
@@ -20,10 +20,10 @@ export function nminSampleId(plot_id: string): string {
   return `${plot_id}_NMIN`;
 }
 
-export function generateSoilSamples(plots: Plot[]): SoilSample[] {
+export function generateSoilSamples(plots: Plot[], plan: SamplingPlan = DEFAULT_PLAN): SoilSample[] {
   const out: SoilSample[] = [];
   for (const p of plots) {
-    for (const d of DEPTHS) {
+    for (const d of plan.depths) {
       out.push({
         sample_id: soilSampleId(p.plot_id, d.code),
         plot_id: p.plot_id,
@@ -36,10 +36,13 @@ export function generateSoilSamples(plots: Plot[]): SoilSample[] {
   return out;
 }
 
-export function generateBDRingStubs(n = 16): BDRing[] {
+export function generateBDRingStubs(plan: SamplingPlan = DEFAULT_PLAN): BDRing[] {
   const out: BDRing[] = [];
-  for (let i = 1; i <= n; i++) {
-    for (const d of DEPTHS) {
+  const cells = plan.genotypes.length * plan.doses.length;
+  const bdBlocks = Math.max(0, Math.min(plan.nBdBlocks, plan.nBlocks));
+  const nPoints = bdBlocks * cells;
+  for (let i = 1; i <= nPoints; i++) {
+    for (const d of plan.bdRingDepths) {
       out.push({
         ring_id: bdRingId(i, d.code),
         depth_label: d.label,
