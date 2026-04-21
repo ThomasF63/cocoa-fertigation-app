@@ -5,6 +5,7 @@ import { importCsvFile } from "../../db/csv";
 import type { StoreName } from "../../db/schema";
 import { generatePlots, generateTrees } from "../../engine/layoutEngine";
 import { generateSoilSamples, generateBDRingStubs, generateLeafComposites, generateNminSamples } from "../../engine/samplingEngine";
+import { loadPlan } from "../../utils/planStorage";
 
 const TARGETS: Record<StoreName, number> = {
   plots: 48,
@@ -53,13 +54,14 @@ export function OverviewTab({ onPendingChange }: Props) {
 
   async function seedDesign() {
     setBusy("Seeding factorial...");
-    const plots = generatePlots();
+    const plan = loadPlan();
+    const plots = generatePlots(plan);
     await bulkPut("plots", plots);
     await bulkPut("trees", generateTrees(plots));
-    await bulkPut("soil_samples", generateSoilSamples(plots));
-    await bulkPut("bd_rings", generateBDRingStubs());
-    await bulkPut("leaf_composites", generateLeafComposites(plots));
-    await bulkPut("nmin_samples", generateNminSamples(plots));
+    await bulkPut("soil_samples", generateSoilSamples(plots, plan));
+    await bulkPut("bd_rings", generateBDRingStubs(plan));
+    await bulkPut("leaf_composites", plan.includeLeafComposites ? generateLeafComposites(plots) : []);
+    await bulkPut("nmin_samples", plan.includeNmin ? generateNminSamples(plots) : []);
     setBusy(null);
     refresh();
   }
@@ -96,16 +98,22 @@ export function OverviewTab({ onPendingChange }: Props) {
       </div>
 
       <div className="card">
-        <div className="card-title">Data collection status</div>
+        <h2 className="card-title">Data collection status</h2>
         <div className="stat-grid">
           {counts && (Object.keys(TARGETS) as StoreName[]).map((s) => {
             const got = counts[s] ?? 0;
             const target = TARGETS[s];
+            const pct = target === 0 ? 0 : Math.min(100, Math.round(100 * got / target));
             return (
               <div key={s} className="stat">
                 <span className="stat-label">{LABELS[s]}</span>
                 <span className="stat-value">{got}<span className="muted" style={{ fontSize: "0.7em" }}> / {target}</span></span>
-                <span className="stat-sub">{target === 0 ? "" : `${Math.round(100 * got / target)}%`}</span>
+                <span className="stat-sub">{target === 0 ? "" : `${pct}%`}</span>
+                {target > 0 && (
+                  <div className="stat-bar" role="progressbar" aria-label={`${LABELS[s]} progress`} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+                    <div className="stat-bar-fill" style={{ width: `${pct}%` }} />
+                  </div>
+                )}
               </div>
             );
           })}
@@ -113,7 +121,7 @@ export function OverviewTab({ onPendingChange }: Props) {
       </div>
 
       <div className="card">
-        <div className="card-title">Actions</div>
+        <h2 className="card-title">Actions</h2>
         <div className="row" style={{ flexWrap: "wrap", gap: 10 }}>
           <button className="btn primary" onClick={seedDesign} disabled={!!busy}>
             <Database size={16} /> Seed factorial (plots + trees + sample IDs)

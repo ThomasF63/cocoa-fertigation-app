@@ -51,12 +51,18 @@ export function MixedEffectsPanel({ obs, depthResolved, label, unit }: {
         <div className="stat"><span className="stat-label">Outcome</span><span className="stat-value" style={{ fontSize: "1rem" }}>{label}{unit ? ` (${unit})` : ""}</span></div>
       </div>
 
-      <div className="card" style={{ background: "var(--soil-04)", marginBottom: 10 }}>
-        <div className="card-title">Model</div>
+      <div style={{
+        background: "var(--soil-04)",
+        border: "1px solid var(--panel-border)",
+        borderRadius: "var(--radius-control)",
+        padding: "var(--space-3) var(--space-4)",
+        marginBottom: 10,
+      }}>
+        <h2 className="card-title">Model</h2>
         <code className="mono">{result.formula}</code>
       </div>
 
-      <div className="card-title" style={{ marginTop: 10 }}>F-tests with appropriate error strata</div>
+      <h2 className="card-title" style={{ marginTop: 10 }}>F-tests with appropriate error strata</h2>
       <div style={{ overflow: "auto" }}>
         <table className="data-table">
           <thead>
@@ -92,7 +98,7 @@ export function MixedEffectsPanel({ obs, depthResolved, label, unit }: {
         </table>
       </div>
 
-      <div className="card-title" style={{ marginTop: 14 }}>Variance components</div>
+      <h2 className="card-title" style={{ marginTop: 14 }}>Variance components</h2>
       <div className="stat-grid">
         <div className="stat">
           <span className="stat-label">Whole-plot</span>

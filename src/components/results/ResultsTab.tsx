@@ -60,14 +60,14 @@ export function ResultsTab() {
 
       {sub === "descriptive" && (
         <div className="card">
-          <div className="card-title">Treatment descriptives</div>
+          <h2 className="card-title">Treatment descriptives</h2>
           <DescriptiveTable obs={obs} includeDepth={depthResolved} unit={def.unit} />
         </div>
       )}
 
       {sub === "dose" && (
         <div className="card">
-          <div className="card-title">Dose response</div>
+          <h2 className="card-title">Dose response</h2>
           <DoseResponseChart obs={obs} unit={def.unit} label={def.label} />
           <div className="muted" style={{ fontSize: "0.78rem", marginTop: 8 }}>
             Means +- SE across plots. Faint grey points: individual plot observations. For depth-resolved variables, values are averaged across depths.
@@ -77,7 +77,7 @@ export function ResultsTab() {
 
       {sub === "depth" && (
         <div className="card">
-          <div className="card-title">Depth profile</div>
+          <h2 className="card-title">Depth profile</h2>
           <DepthProfileChart obs={obs} unit={def.unit} label={def.label} />
           <div className="muted" style={{ fontSize: "0.78rem", marginTop: 8 }}>
             Means +- SE. Line style encodes genotype (solid = CCN 51, dashed = PS 13.19). Colour encodes N dose.
@@ -87,14 +87,14 @@ export function ResultsTab() {
 
       {sub === "inference" && (
         <div className="card">
-          <div className="card-title">Fixed-effects ANOVA</div>
+          <h2 className="card-title">Fixed-effects ANOVA</h2>
           <AnovaTable obs={obs} depthResolved={depthResolved} label={def.label} unit={def.unit} />
         </div>
       )}
 
       {sub === "mixed" && (
         <div className="card">
-          <div className="card-title">Mixed-effects split-plot ANOVA</div>
+          <h2 className="card-title">Mixed-effects split-plot ANOVA</h2>
           <MixedEffectsPanel obs={obs} depthResolved={depthResolved} label={def.label} unit={def.unit} />
         </div>
       )}

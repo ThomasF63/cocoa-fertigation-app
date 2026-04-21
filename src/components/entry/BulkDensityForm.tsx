@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useStoreItems, useDebouncedSave } from "../../utils/useStoreItems";
 import { PlotPicker, ProgressBar, Stepper, isoDate, num, str } from "./shared";
 import type { Plot } from "../../types/design";
@@ -20,6 +20,13 @@ export function BulkDensityForm() {
 
   const [idx, setIdx] = useState(0);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+
+  const dateId = useId();
+  const samplerId = useId();
+  const volId = useId();
+  const freshId = useId();
+  const dryId = useId();
+  const notesId = useId();
 
   const sorted = useMemo(
     () => [...rings.items].sort((a, b) => a.ring_id.localeCompare(b.ring_id)),
@@ -54,7 +61,7 @@ export function BulkDensityForm() {
         </div>
 
         <div className="field" style={{ marginBottom: 14 }}>
-          <label>Plot assignment</label>
+          <span className="field-label">Plot assignment</span>
           <PlotPicker
             plots={plots.items}
             value={ring.plot_id ?? null}
@@ -65,16 +72,18 @@ export function BulkDensityForm() {
 
         <div className="field-grid" style={{ marginBottom: 14 }}>
           <div className="field">
-            <label>Sampling date</label>
+            <label htmlFor={dateId}>Sampling date</label>
             <input
+              id={dateId}
               type="date"
               value={isoDate(ring.sampling_date)}
               onChange={e => patch({ sampling_date: e.target.value || undefined })}
             />
           </div>
           <div className="field">
-            <label>Sampler</label>
+            <label htmlFor={samplerId}>Sampler</label>
             <input
+              id={samplerId}
               type="text"
               value={ring.sampler ?? ""}
               onChange={e => patch({ sampler: str(e) })}
@@ -84,8 +93,9 @@ export function BulkDensityForm() {
 
         <div className="big-input-grid" style={{ marginBottom: 10 }}>
           <div className="field">
-            <label>Ring volume (cm<sup>3</sup>)</label>
+            <label htmlFor={volId}>Ring volume (cm<sup>3</sup>)</label>
             <input
+              id={volId}
               className="big-input"
               type="number"
               inputMode="decimal"
@@ -95,8 +105,9 @@ export function BulkDensityForm() {
             />
           </div>
           <div className="field">
-            <label>Fresh weight (g)</label>
+            <label htmlFor={freshId}>Fresh weight (g)</label>
             <input
+              id={freshId}
               className="big-input"
               type="number"
               inputMode="decimal"
@@ -106,8 +117,9 @@ export function BulkDensityForm() {
             />
           </div>
           <div className="field">
-            <label>Dry weight (g)</label>
+            <label htmlFor={dryId}>Dry weight (g)</label>
             <input
+              id={dryId}
               className="big-input"
               type="number"
               inputMode="decimal"
@@ -124,8 +136,9 @@ export function BulkDensityForm() {
         </div>
 
         <div className="field">
-          <label>Notes</label>
+          <label htmlFor={notesId}>Notes</label>
           <input
+            id={notesId}
             type="text"
             value={ring.notes ?? ""}
             onChange={e => patch({ notes: str(e) })}

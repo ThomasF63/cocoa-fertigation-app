@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useStoreItems, useDebouncedSave } from "../../utils/useStoreItems";
 import { ProgressBar, Stepper, isoDate, num, str } from "./shared";
 import type { LeafComposite } from "../../types/samples";
@@ -17,6 +17,14 @@ export function LeafCompositeForm() {
   );
   const [idx, setIdx] = useState(0);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+
+  const dateId = useId();
+  const observerId = useId();
+  const treesId = useId();
+  const leavesId = useId();
+  const freshId = useId();
+  const dryId = useId();
+  const notesId = useId();
 
   if (comps.loading) return <div className="card"><div className="muted">Loading...</div></div>;
   if (sorted.length === 0) return <div className="card"><div className="muted">No leaf composite stubs. Seed the factorial first.</div></div>;
@@ -44,16 +52,18 @@ export function LeafCompositeForm() {
 
       <div className="field-grid" style={{ marginBottom: 14 }}>
         <div className="field">
-          <label>Sampling date</label>
+          <label htmlFor={dateId}>Sampling date</label>
           <input
+            id={dateId}
             type="date"
             value={isoDate(item.sampling_date)}
             onChange={e => patch({ sampling_date: e.target.value || undefined })}
           />
         </div>
         <div className="field">
-          <label>Observer</label>
+          <label htmlFor={observerId}>Observer</label>
           <input
+            id={observerId}
             type="text"
             value={item.observer ?? ""}
             onChange={e => patch({ observer: str(e) })}
@@ -63,8 +73,21 @@ export function LeafCompositeForm() {
 
       <div className="big-input-grid" style={{ marginBottom: 14 }}>
         <div className="field">
-          <label>Number of leaves</label>
+          <label htmlFor={treesId}>Trees sampled</label>
           <input
+            id={treesId}
+            className="big-input"
+            type="number"
+            inputMode="numeric"
+            step="1"
+            value={item.n_trees_sampled ?? ""}
+            onChange={e => patch({ n_trees_sampled: num(e) })}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor={leavesId}>Number of leaves</label>
+          <input
+            id={leavesId}
             className="big-input"
             type="number"
             inputMode="decimal"
@@ -74,8 +97,9 @@ export function LeafCompositeForm() {
           />
         </div>
         <div className="field">
-          <label>Fresh weight (g)</label>
+          <label htmlFor={freshId}>Fresh weight (g)</label>
           <input
+            id={freshId}
             className="big-input"
             type="number"
             inputMode="decimal"
@@ -85,8 +109,9 @@ export function LeafCompositeForm() {
           />
         </div>
         <div className="field">
-          <label>Dry weight (g)</label>
+          <label htmlFor={dryId}>Dry weight (g)</label>
           <input
+            id={dryId}
             className="big-input"
             type="number"
             inputMode="decimal"
@@ -98,8 +123,9 @@ export function LeafCompositeForm() {
       </div>
 
       <div className="field">
-        <label>Notes</label>
+        <label htmlFor={notesId}>Notes</label>
         <input
+          id={notesId}
           type="text"
           value={item.notes ?? ""}
           onChange={e => patch({ notes: str(e) })}

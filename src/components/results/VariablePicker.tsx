@@ -9,7 +9,7 @@ export function VariablePicker({ value, onChange }: {
       <span className="muted mono" style={{ fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase" }}>
         Variable
       </span>
-      <select value={value} onChange={e => onChange(e.target.value as VariableKey)}>
+      <select aria-label="Variable" value={value} onChange={e => onChange(e.target.value as VariableKey)}>
         {VARIABLES.map(v => (
           <option key={v.key} value={v.key}>
             {v.label}{v.unit ? ` (${v.unit})` : ""}

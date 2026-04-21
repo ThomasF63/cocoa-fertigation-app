@@ -14,6 +14,7 @@ export function PlotPicker({
     <div className="plot-picker">
       <span className="muted mono" style={{ fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</span>
       <select
+        aria-label={label}
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
       >
@@ -79,17 +80,20 @@ export function Stepper({
 }
 
 export function ScoreButtons({
-  value, onChange, max = 5,
+  value, onChange, label, max = 5,
 }: {
   value: number | undefined;
   onChange: (v: number | undefined) => void;
+  label: string;
   max?: number;
 }) {
   return (
-    <div className="score-buttons">
+    <div className="score-buttons" role="radiogroup" aria-label={label}>
       {Array.from({ length: max + 1 }, (_, i) => (
         <button
           key={i}
+          role="radio"
+          aria-checked={value === i}
           data-active={value === i}
           onClick={() => onChange(value === i ? undefined : i)}
           type="button"

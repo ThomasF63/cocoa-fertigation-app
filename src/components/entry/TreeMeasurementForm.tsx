@@ -1,8 +1,20 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useStoreItems, useDebouncedSave } from "../../utils/useStoreItems";
 import { PlotPicker, ProgressBar, Stepper, ScoreButtons, isoDate, num, str } from "./shared";
 import type { Plot, Tree } from "../../types/design";
 import type { TreeMeasurement } from "../../types/measurements";
+
+const srOnly: React.CSSProperties = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: "hidden",
+  clip: "rect(0 0 0 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+};
 
 function meanOf(a?: number, b?: number, c?: number): number | undefined {
   const vals = [a, b, c].filter((v): v is number => typeof v === "number");
@@ -28,6 +40,12 @@ export function TreeMeasurementForm() {
   const [selectedPlot, setSelectedPlot] = useState<string | null>(null);
   const [treeIdx, setTreeIdx] = useState(0);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+
+  const dateId = useId();
+  const spadBaseId = useId();
+  const stemId = useId();
+  const observerId = useId();
+  const notesId = useId();
 
   const plotTrees = useMemo(() => {
     if (!selectedPlot) return [] as Tree[];
@@ -78,7 +96,7 @@ export function TreeMeasurementForm() {
   return (
     <div className="column" style={{ gap: 14 }}>
       <div className="card">
-        <div className="card-title">Select plot</div>
+        <h2 className="card-title">Select plot</h2>
         <PlotPicker
           plots={plots.items}
           value={selectedPlot}
@@ -104,20 +122,23 @@ export function TreeMeasurementForm() {
             </div>
 
             <div className="field" style={{ marginBottom: 14 }}>
-              <label>Measurement date</label>
+              <label htmlFor={dateId}>Measurement date</label>
               <input
+                id={dateId}
                 type="date"
                 value={isoDate(currentMeas.measurement_date)}
                 onChange={e => patch({ measurement_date: e.target.value || undefined })}
               />
             </div>
 
-            <div className="column" style={{ gap: 6, marginBottom: 14 }}>
-              <label className="mono" style={{ fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-muted)" }}>
+            <fieldset className="column" style={{ gap: 6, marginBottom: 14, border: "none", padding: 0, margin: 0 }}>
+              <legend className="mono" style={{ fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-muted)", padding: 0 }}>
                 SPAD readings (3 mid-canopy leaves)
-              </label>
+              </legend>
               <div className="big-input-grid">
+                <label htmlFor={`${spadBaseId}-spad-1`} style={srOnly}>SPAD leaf 1</label>
                 <input
+                  id={`${spadBaseId}-spad-1`}
                   className="big-input"
                   type="number"
                   inputMode="decimal"
@@ -126,7 +147,9 @@ export function TreeMeasurementForm() {
                   value={currentMeas.spad_leaf_1 ?? ""}
                   onChange={e => patch({ spad_leaf_1: num(e) })}
                 />
+                <label htmlFor={`${spadBaseId}-spad-2`} style={srOnly}>SPAD leaf 2</label>
                 <input
+                  id={`${spadBaseId}-spad-2`}
                   className="big-input"
                   type="number"
                   inputMode="decimal"
@@ -135,7 +158,9 @@ export function TreeMeasurementForm() {
                   value={currentMeas.spad_leaf_2 ?? ""}
                   onChange={e => patch({ spad_leaf_2: num(e) })}
                 />
+                <label htmlFor={`${spadBaseId}-spad-3`} style={srOnly}>SPAD leaf 3</label>
                 <input
+                  id={`${spadBaseId}-spad-3`}
                   className="big-input"
                   type="number"
                   inputMode="decimal"
@@ -148,11 +173,12 @@ export function TreeMeasurementForm() {
               <div className="mono muted" style={{ textAlign: "right", fontSize: "0.82rem" }}>
                 Mean: <strong style={{ color: "var(--text-primary)" }}>{currentMeas.spad_mean ?? "-"}</strong>
               </div>
-            </div>
+            </fieldset>
 
             <div className="field" style={{ marginBottom: 14 }}>
-              <label>Stem diameter at 30 cm (mm)</label>
+              <label htmlFor={stemId}>Stem diameter at 30 cm (mm)</label>
               <input
+                id={stemId}
                 className="big-input"
                 type="number"
                 inputMode="decimal"
@@ -164,16 +190,18 @@ export function TreeMeasurementForm() {
             </div>
 
             <div className="field" style={{ marginBottom: 14 }}>
-              <label>Pod load (0 to 5)</label>
+              <span className="field-label">Pod load (0 to 5)</span>
               <ScoreButtons
+                label="Pod load (0 to 5)"
                 value={currentMeas.pod_load_score}
                 onChange={v => patch({ pod_load_score: v })}
               />
             </div>
 
             <div className="field" style={{ marginBottom: 14 }}>
-              <label>Vigour (0 to 5)</label>
+              <span className="field-label">Vigour (0 to 5)</span>
               <ScoreButtons
+                label="Vigour (0 to 5)"
                 value={currentMeas.vigour_score}
                 onChange={v => patch({ vigour_score: v })}
               />
@@ -181,16 +209,18 @@ export function TreeMeasurementForm() {
 
             <div className="field-grid">
               <div className="field">
-                <label>Observer</label>
+                <label htmlFor={observerId}>Observer</label>
                 <input
+                  id={observerId}
                   type="text"
                   value={currentMeas.observer ?? ""}
                   onChange={e => patch({ observer: str(e) })}
                 />
               </div>
               <div className="field">
-                <label>Notes</label>
+                <label htmlFor={notesId}>Notes</label>
                 <input
+                  id={notesId}
                   type="text"
                   value={currentMeas.notes ?? ""}
                   onChange={e => patch({ notes: str(e) })}

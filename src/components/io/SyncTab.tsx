@@ -98,7 +98,7 @@ export function SyncTab({ pendingChanges, lastSync, onSynced }: Props) {
   return (
     <div className="column" style={{ gap: 14 }}>
       <div className="card">
-        <div className="card-title">Offline status</div>
+        <h2 className="card-title">Offline status</h2>
         <div className="stat-grid">
           <div className="stat"><span className="stat-label">Pending changes</span><span className="stat-value">{pendingChanges}</span><span className="stat-sub">measurement + lab rows</span></div>
           <div className="stat"><span className="stat-label">Total rows (local)</span><span className="stat-value">{totalRows}</span></div>
@@ -110,7 +110,7 @@ export function SyncTab({ pendingChanges, lastSync, onSynced }: Props) {
       </div>
 
       <div className="card">
-        <div className="card-title">Export and share</div>
+        <h2 className="card-title">Export and share</h2>
         <div className="column">
           <button className="btn primary big" onClick={onShareOrDownload} disabled={!!busy}>
             <Share2 size={20} /> Export and share bundle (.zip of all CSVs)
@@ -123,7 +123,7 @@ export function SyncTab({ pendingChanges, lastSync, onSynced }: Props) {
       </div>
 
       <div className="card">
-        <div className="card-title">Import CSVs</div>
+        <h2 className="card-title">Import CSVs</h2>
         <label className="btn big">
           <Upload size={20} /> Select one or more CSV files
           <input
@@ -140,7 +140,7 @@ export function SyncTab({ pendingChanges, lastSync, onSynced }: Props) {
       </div>
 
       <div className="card">
-        <div className="card-title">Generate report</div>
+        <h2 className="card-title">Generate report</h2>
         <div className="column">
           <button className="btn big" onClick={onReport} disabled={!!busy}>
             <FileText size={20} /> Build interim PDF report
