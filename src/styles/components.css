@@ -67,6 +67,30 @@
   background: oklch(97.5% 0.007 68 / 0.08);
   color: var(--ek-root);
 }
+.sidebar-toggle-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.sidebar-toggle-btn:disabled:hover {
+  background: transparent;
+  color: oklch(97.5% 0.007 68 / 0.65);
+}
+
+.zoom-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-control);
+  background: oklch(97.5% 0.007 68 / 0.05);
+}
+.zoom-group .zoom-readout {
+  min-width: 44px;
+  justify-content: center;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  padding: 5px var(--space-2);
+}
 
 /* ===== SIDEBAR ===== */
 .sidebar {
@@ -298,11 +322,6 @@
   outline: 2px solid var(--ek-root);
   outline-offset: -2px;
 }
-.plot-picker:focus-within {
-  outline: 2px solid var(--ek-water);
-  outline-offset: -1px;
-  border-color: var(--ek-water);
-}
 
 /* ===== TABLES ===== */
 .data-table {
@@ -316,6 +335,10 @@
   padding: var(--space-2) var(--space-3);
   text-align: left;
 }
+.results-content .data-table th,
+.results-content .data-table td {
+  padding: 5px var(--space-2);
+}
 .data-table th {
   font-family: var(--font-family);
   font-size: 0.72rem;
@@ -327,6 +350,268 @@
 }
 .data-table tbody tr:hover { background: var(--soil-04); }
 .data-table td.mono { font-family: var(--font-mono); font-size: 0.80rem; }
+
+/* Significant ANOVA rows — stem-green tint, intensity scales with p.
+   Accent bar on the first cell lets the eye scan the term column at a glance. */
+:root {
+  --sig-bg-weak:    oklch(52% 0.082 145 / 0.06);
+  --sig-bg-med:     oklch(52% 0.082 145 / 0.10);
+  --sig-bg-strong:  oklch(52% 0.082 145 / 0.15);
+  --sig-bg-hover:   oklch(52% 0.082 145 / 0.20);
+  --sig-bar-weak:   oklch(52% 0.082 145 / 0.45);
+  --sig-bar-med:    oklch(52% 0.082 145 / 0.75);
+  --sig-bar-strong: var(--ek-stem-dark);
+  --sig-text:       var(--ek-stem-dark);
+}
+[data-theme="dark"] {
+  --sig-bg-weak:    oklch(68% 0.095 145 / 0.10);
+  --sig-bg-med:     oklch(68% 0.095 145 / 0.16);
+  --sig-bg-strong:  oklch(68% 0.095 145 / 0.24);
+  --sig-bg-hover:   oklch(68% 0.095 145 / 0.30);
+  --sig-bar-weak:   oklch(68% 0.095 145 / 0.55);
+  --sig-bar-med:    oklch(68% 0.095 145 / 0.85);
+  --sig-bar-strong: var(--ek-stem-dark);
+}
+.data-table tbody tr.sig-weak   { background: var(--sig-bg-weak); }
+.data-table tbody tr.sig-med    { background: var(--sig-bg-med); }
+.data-table tbody tr.sig-strong { background: var(--sig-bg-strong); }
+.data-table tbody tr.sig-weak:hover,
+.data-table tbody tr.sig-med:hover,
+.data-table tbody tr.sig-strong:hover { background: var(--sig-bg-hover); }
+.data-table tbody tr.sig-weak   td:first-child { box-shadow: inset 3px 0 0 var(--sig-bar-weak); }
+.data-table tbody tr.sig-med    td:first-child { box-shadow: inset 3px 0 0 var(--sig-bar-med); }
+.data-table tbody tr.sig-strong td:first-child { box-shadow: inset 3px 0 0 var(--sig-bar-strong); }
+.data-table tbody tr.sig-weak   td.sig-pcell,
+.data-table tbody tr.sig-med    td.sig-pcell,
+.data-table tbody tr.sig-strong td.sig-pcell { color: var(--sig-text); font-weight: 600; }
+.data-table tbody tr.sig-weak   td.sig-stars,
+.data-table tbody tr.sig-med    td.sig-stars,
+.data-table tbody tr.sig-strong td.sig-stars { color: var(--sig-text); font-weight: 700; letter-spacing: 0.05em; }
+
+/* Descriptive table conditional formatting.
+   Data bars are painted via inline linear-gradient on td (no extra DOM).
+   Floating bars (CI, Range) use an absolutely-positioned span at the cell base. */
+.descriptive-block { display: flex; flex-direction: column; gap: var(--space-2); }
+.descriptive-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+.data-table td.databar {
+  background-clip: padding-box;
+}
+.data-table td.floatbar {
+  position: relative;
+  min-width: 110px;
+  padding-bottom: 9px;
+}
+.data-table td.floatbar .floatbar-track {
+  position: absolute;
+  bottom: 3px;
+  height: 3px;
+  border-radius: 2px;
+  pointer-events: none;
+  opacity: 0.55;
+}
+.data-table td.floatbar .floatbar-text { position: relative; }
+
+/* Filter chips above the descriptive table.
+   Chips are toggle buttons: data-active="true" = row passes for that value. */
+.descriptive-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--soil-04);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+}
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.filter-label {
+  font-family: var(--font-family);
+  font-size: 0.70rem;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.filter-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Shared treatment/filter chip. Used by the descriptive-table filters (as a
+   <button>) and by the PlanControls Treatment-factors panel (as a <label>
+   wrapping a checkbox). Visual grammar is keyed on data attributes so both
+   consumers stay in sync:
+     data-active   = "true" | "false"    ← toggled on/off
+     data-geno     = "CCN51" | "PS1319"  ← genotype tint (matches plot map)
+     data-dose-level = "L" | "M" | "H"   ← dose intensity ramp
+
+   Chips without a geno/dose attribute fall back to the generic accent in
+   --chip-accent (default: --ek-water), which callers can override inline. */
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-sizing: border-box;
+  padding: 3px 10px;
+  font-family: var(--font-family);
+  font-size: 0.74rem;
+  font-weight: 500;
+  min-height: 24px;
+  color: var(--text-muted);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s;
+}
+.filter-chip.mono { font-family: var(--font-mono); }
+.filter-chip input[type="checkbox"] {
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  accent-color: currentColor;
+}
+.filter-chip:focus-visible,
+.filter-chip:has(input:focus-visible) {
+  outline: 2px solid var(--ek-water);
+  outline-offset: 1px;
+}
+
+/* Inactive state: muted text and dashed border, no opacity-fade (opacity
+   composes unpredictably with tinted text over tinted surfaces). Strike-
+   through carries the "excluded" signal. */
+.filter-chip[data-active="false"] {
+  color: var(--text-muted);
+  background: transparent;
+  border-style: dashed;
+  text-decoration: line-through;
+}
+.filter-chip[data-active="false"]:hover {
+  color: var(--text-primary);
+  border-color: var(--panel-border-strong);
+}
+
+/* Active — generic (no geno/dose): use --chip-accent, defaulting to water. */
+.filter-chip[data-active="true"] {
+  color: white;
+  background: var(--chip-accent, var(--ek-water));
+  border-color: var(--chip-accent, var(--ek-water));
+}
+.filter-chip[data-active="true"]:hover { filter: brightness(0.96); }
+
+/* Active — genotype tints. Fill + stroke match plot-map convention, text
+   colour comes from theme-aware --chip-text-* tokens for contrast. */
+.filter-chip[data-active="true"][data-geno="CCN51"] {
+  color: var(--chip-text-stem);
+  background: color-mix(in oklch, var(--ek-stem) 22%, transparent);
+  border: 1.5px solid var(--ek-stem-dark);
+}
+.filter-chip[data-active="true"][data-geno="PS1319"] {
+  color: var(--chip-text-berry);
+  background: color-mix(in oklch, var(--ek-berry) 22%, transparent);
+  border: 1.5px solid var(--ek-berry-dark);
+}
+/* Inactive genotype chips keep a hint of hue in the text, toned down. */
+.filter-chip[data-active="false"][data-geno="CCN51"]  {
+  color: color-mix(in oklch, var(--chip-text-stem) 70%, var(--text-muted));
+}
+.filter-chip[data-active="false"][data-geno="PS1319"] {
+  color: color-mix(in oklch, var(--chip-text-berry) 70%, var(--text-muted));
+}
+
+/* Active — dose intensity ramp. Shared amber hue, scaled fill + border width
+   to mirror DOSE_STROKE_WIDTH on the plot map (L→M→H). Fill anchors bumped
+   from 12/24/40 to 14/26/42 so the L chip holds more presence without
+   flattening the ramp. */
+.filter-chip[data-active="true"][data-dose-level="L"] {
+  color: var(--chip-text-seed);
+  background: color-mix(in oklch, var(--ek-seed) 14%, transparent);
+  border: 1px solid color-mix(in oklch, var(--ek-seed) 60%, transparent);
+}
+.filter-chip[data-active="true"][data-dose-level="M"] {
+  color: var(--chip-text-seed);
+  background: color-mix(in oklch, var(--ek-seed) 26%, transparent);
+  border: 1.6px solid color-mix(in oklch, var(--ek-seed) 80%, transparent);
+}
+.filter-chip[data-active="true"][data-dose-level="H"] {
+  color: var(--chip-text-seed);
+  background: color-mix(in oklch, var(--ek-seed) 42%, transparent);
+  border: 2.4px solid var(--ek-seed);
+}
+.filter-chip[data-active="false"][data-dose-level] {
+  color: color-mix(in oklch, var(--chip-text-seed) 70%, var(--text-muted));
+}
+
+/* Sunlight / high-contrast mode — drop chromatic tints so chips read
+   cleanly on the pure-white panel. Preserve the genotype grammar via
+   border colour and the dose ramp via border width. */
+[data-theme="contrast"] .filter-chip[data-active="true"][data-geno],
+[data-theme="contrast"] .filter-chip[data-active="true"][data-dose-level] {
+  background: var(--panel-bg);
+  color: var(--text-primary);
+}
+[data-theme="contrast"] .filter-chip[data-active="true"][data-geno="CCN51"]  { border-color: oklch(28% 0.12 145); }
+[data-theme="contrast"] .filter-chip[data-active="true"][data-geno="PS1319"] { border-color: oklch(26% 0.12 340); }
+[data-theme="contrast"] .filter-chip[data-active="true"][data-dose-level="L"] { border-width: 1.5px; border-color: oklch(32% 0.10 62); }
+[data-theme="contrast"] .filter-chip[data-active="true"][data-dose-level="M"] { border-width: 2.5px; border-color: oklch(32% 0.10 62); }
+[data-theme="contrast"] .filter-chip[data-active="true"][data-dose-level="H"] { border-width: 3.5px; border-color: oklch(32% 0.10 62); }
+.filter-reset {
+  padding: 3px 10px;
+  font-family: var(--font-family);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px dashed var(--panel-border-strong);
+  border-radius: 6px;
+  cursor: pointer;
+  margin-left: auto;
+}
+.filter-reset:hover { color: var(--text-primary); background: var(--panel-bg); }
+.filter-reset:focus-visible { outline: 2px solid var(--ek-water); outline-offset: 1px; }
+
+/* Sortable column headers in the descriptive table. */
+.data-table th .sort-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  user-select: none;
+}
+.data-table th .sort-header:hover { color: var(--text-primary); }
+.data-table th .sort-header[data-active="true"] { color: var(--text-primary); }
+.data-table th .sort-header:focus-visible {
+  outline: 2px solid var(--ek-water);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.data-table th .sort-indicator {
+  font-size: 0.75rem;
+  line-height: 1;
+  color: var(--ek-water);
+}
+.data-table th .sort-indicator sub {
+  font-size: 0.60rem;
+  margin-left: 1px;
+  color: var(--text-muted);
+}
 
 /* ===== FORM GRID ===== */
 .field-grid {
@@ -364,6 +649,17 @@
 .field input.mono,
 .field select {
   font-family: var(--font-mono);
+}
+/* Field-input uses on-screen or typed values only; we don't want the native
+   browser spinners, which are tiny and easy to mis-hit on a tablet. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 .field input:focus,
 .field select:focus,
@@ -440,7 +736,7 @@
 
 /* ===== iPad / TOUCH / FIELD MODE ===== */
 @media (max-width: 1024px), (pointer: coarse) {
-  body { font-size: 15px; }
+  body { font-size: calc(15px * var(--ui-scale, 1)); }
 
   .sidebar { display: none; }
   .tab-bar { display: none; }
@@ -590,6 +886,349 @@
   background: var(--ek-soil-dark);
   border-color: var(--ek-soil-dark);
 }
+/* Compact variant for Results-tab sub-nav: tighter padding, smaller font. */
+.entry-nav.compact {
+  gap: var(--space-1);
+  margin-bottom: 0;
+}
+.entry-nav.compact .entry-nav-btn {
+  padding: 6px var(--space-3);
+  font-size: 0.80rem;
+  min-height: 34px;
+  border-radius: 8px;
+}
+
+/* Results tab: tight spacing so ANOVA fits one screen. */
+.results-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.results-subnav-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+.results-subnav-row .results-meta {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.results-content { padding: var(--space-3) var(--space-4); }
+
+/* Small toolbar above a chart — label + segmented control. */
+.chart-block { display: flex; flex-direction: column; gap: var(--space-2); }
+.chart-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+.chart-toolbar-label {
+  font-family: var(--font-family);
+  font-size: 0.70rem;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.chart-toolbar-seg {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--soil-04);
+  border: 1px solid var(--panel-border);
+}
+.chart-toolbar-btn {
+  padding: 3px 10px;
+  font-family: var(--font-family);
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  min-height: 26px;
+  transition: background 0.15s, color 0.15s;
+}
+.chart-toolbar-btn:hover { color: var(--text-primary); }
+.chart-toolbar-btn[data-active="true"] {
+  background: var(--panel-bg);
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px oklch(27% 0.022 50 / 0.15);
+}
+.chart-toolbar-btn:focus-visible {
+  outline: 2px solid var(--ek-water);
+  outline-offset: 1px;
+}
+
+/* Chart hover info card (Recharts Tooltip content).
+   The translate centers the card horizontally on the hovered point and
+   pushes it below — Recharts positions its wrapper at the point, and this
+   transform applies on top of that. */
+.chart-tooltip {
+  min-width: 180px;
+  max-width: 260px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border-strong);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-tooltip);
+  font-family: var(--font-family);
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  line-height: 1.35;
+  transform: translate(-50%, 14px);
+}
+.chart-tooltip-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--panel-border);
+}
+.chart-tooltip-key {
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.chart-tooltip-hval {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.chart-tooltip-hval .mono {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  margin-right: 2px;
+}
+.chart-tooltip-unit {
+  margin-top: 4px;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.chart-tooltip-rows {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+.chart-tooltip-row {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  align-items: baseline;
+  column-gap: var(--space-2);
+  row-gap: 0;
+  padding: 2px 0;
+}
+.chart-tooltip-subhead {
+  font-size: 0.64rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--panel-border);
+}
+.chart-tooltip-subhead:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+.chart-tooltip-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  transform: translateY(1px);
+}
+.chart-tooltip-swatch-ring {
+  background: var(--panel-bg);
+  border: 2px solid currentColor;
+}
+.chart-tooltip-name {
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chart-tooltip-metric {
+  justify-self: end;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.chart-tooltip-mean { font-weight: 600; }
+.chart-tooltip-se {
+  margin-left: 4px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.chart-tooltip-note {
+  grid-column: 2 / -1;
+  font-size: 0.66rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  margin-top: -1px;
+}
+
+/* Depth profile — instrument-caption legend above the plot.
+   Colour = dose, marker fill/line style = genotype. The legend is a flat
+   caption (no card tint, no framing box) and its chips are interactive:
+   hovering or focusing a chip dims the other series in the plot. */
+.depth-profile {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.depth-profile-plot {
+  width: 100%;
+  height: clamp(280px, 46vh, 440px);
+}
+.depth-profile-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px var(--space-4);
+  margin: 0 0 var(--space-3);
+  padding: 2px 2px 8px;
+  border-bottom: 1px solid var(--panel-border);
+  font-family: var(--font-family);
+}
+.depth-profile-legend-group {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.depth-profile-legend-divider {
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 1px;
+  margin: 2px 0;
+  background: var(--panel-border);
+}
+.depth-profile-legend-label {
+  font-size: 0.64rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-weight: 600;
+}
+.depth-profile-legend-unit {
+  font-family: var(--font-mono);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-muted);
+  font-size: 0.64rem;
+  opacity: 0.72;
+  margin-left: 2px;
+  font-weight: 400;
+}
+.depth-profile-legend-items {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.depth-profile-legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 8px;
+  margin: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 140ms ease-out, color 140ms ease-out, opacity 140ms ease-out;
+}
+.depth-profile-legend-chip:hover,
+.depth-profile-legend-chip:focus-visible,
+.depth-profile-legend-chip[aria-pressed="true"] {
+  background: var(--soil-04);
+  color: var(--text-primary);
+}
+.depth-profile-legend-chip:focus-visible {
+  outline: 2px solid var(--ek-water);
+  outline-offset: 1px;
+}
+.depth-profile-legend-chip[data-dim] {
+  opacity: 0.45;
+}
+.depth-profile-legend-chip[data-dim]:hover,
+.depth-profile-legend-chip[data-dim]:focus-visible {
+  opacity: 1;
+}
+.depth-profile-legend-glyph {
+  display: block;
+  flex-shrink: 0;
+}
+.depth-profile-legend-text {
+  line-height: 1;
+}
+.depth-profile-legend-chip .depth-profile-legend-text.mono {
+  font-family: var(--font-mono);
+  font-size: 0.80rem;
+  font-feature-settings: "tnum" 1;
+}
+@media (max-width: 540px) {
+  .depth-profile-legend-divider { display: none; }
+  .depth-profile-legend {
+    gap: 4px var(--space-3);
+  }
+}
+
+.results-content > .card-title:first-child { margin-top: 0; }
+.results-content .caption {
+  font-size: 0.74rem;
+  margin-top: var(--space-2);
+  line-height: 1.45;
+}
+/* Single-line summary bar replacing bulky stat cards in ANOVA / Mixed panels. */
+.inline-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-4);
+  padding: 4px var(--space-2) 8px;
+  margin-bottom: var(--space-2);
+  border-bottom: 1px solid var(--panel-border);
+  font-size: 0.82rem;
+  color: var(--text-primary);
+}
+.inline-stats .muted { color: var(--text-muted); }
+.inline-stats code { font-size: 0.80rem; }
+.variance-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--soil-04);
+  font-size: 0.82rem;
+}
+.variance-row .var-label {
+  font-family: var(--font-family);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.variance-row strong { color: var(--text-secondary); font-weight: 500; margin-right: 4px; }
 
 .entry-toolbar {
   display: flex;
@@ -654,6 +1293,171 @@
   gap: var(--space-3);
 }
 
+/* ===== MEASUREMENT INPUT (labeled numeric field with unit + clear) ===== */
+.m-group {
+  border: none;
+  padding: 0;
+  margin: 0 0 var(--space-4) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.m-group-title {
+  padding: 0;
+  font-family: var(--font-family);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.m-group-sub {
+  font-weight: 400;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  letter-spacing: 0;
+}
+.m-group-foot {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.m-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+.m-grid-1 { grid-template-columns: 1fr; }
+.m-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.m-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.m-grid-4 { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 720px) {
+  .m-grid-3,
+  .m-grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 420px) {
+  .m-grid-2,
+  .m-grid-3,
+  .m-grid-4 { grid-template-columns: 1fr; }
+}
+
+.m-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.m-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 18px;
+}
+.m-field-label {
+  font-family: var(--font-family);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.m-field-badge {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--soil-08);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+.m-field-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.m-field-clear:hover:not(:disabled),
+.m-field-clear:focus-visible:not(:disabled) {
+  background: oklch(from var(--danger) l c h / 0.12);
+  color: var(--danger);
+  border-color: oklch(from var(--danger) l c h / 0.35);
+}
+.m-field-clear:disabled {
+  opacity: 0;
+  cursor: default;
+  pointer-events: none;
+}
+.m-field-clear--inline { width: 20px; height: 20px; }
+
+.m-field-input {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+.m-field-input input {
+  flex: 1;
+  min-width: 0;
+  padding-right: 44px; /* room for the unit suffix */
+}
+.m-field-unit {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  pointer-events: none;
+  letter-spacing: 0;
+}
+.m-field-input[data-filled="true"] .m-field-unit {
+  color: var(--text-secondary);
+}
+
+/* ===== ERASE (record-level destructive action) ===== */
+.erase-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-3);
+}
+.erase-btn {
+  color: var(--danger);
+  border-color: oklch(from var(--danger) l c h / 0.35);
+  background: oklch(from var(--danger) l c h / 0.06);
+  font-size: 0.82rem;
+  min-height: 36px;
+  padding: 4px var(--space-3);
+  gap: 6px;
+}
+.erase-btn:hover,
+.erase-btn:focus-visible {
+  background: oklch(from var(--danger) l c h / 0.14);
+  border-color: oklch(from var(--danger) l c h / 0.55);
+}
+.depth-erase {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
 .score-buttons {
   display: flex;
   gap: var(--space-2);
@@ -706,26 +1510,204 @@
 }
 .saved-flash[data-visible="true"] { opacity: 1; }
 
+/* ===== PICKERS (variable & plot) =====
+   Shared tabs-and-cards UI replacing the old long dropdowns. Plot cards
+   encode genotype via fill tint and dose via border thickness, matching
+   the chip and plot-map grammar. */
+.variable-picker,
 .plot-picker {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-2);
-  padding: 10px var(--space-4);
-  border: 1px solid var(--panel-border-strong);
-  border-radius: 12px;
-  background: var(--panel-bg);
-  min-height: 56px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: var(--soil-04);
 }
-.plot-picker select {
-  flex: 1;
-  font-family: var(--font-mono);
-  font-size: 1.05rem;
+
+/* Tabs row — reuses .entry-nav aesthetics but lives inside the picker. */
+.picker-tabs {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--panel-border);
+  padding-bottom: 4px;
+}
+.picker-tab {
+  padding: 6px 12px;
+  font-family: var(--font-family);
+  font-size: 0.80rem;
+  font-weight: 500;
+  color: var(--text-muted);
   border: none;
   background: transparent;
-  min-height: 44px;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.15s, background 0.15s;
 }
-/* Focus ring surfaces on the wrapping .plot-picker via :focus-within — see controls section. */
-.plot-picker select:focus { outline: none; }
+.picker-tab:hover { color: var(--text-secondary); }
+.picker-tab[data-active="true"] {
+  color: var(--text-primary);
+  font-weight: 600;
+  background: var(--panel-bg);
+}
+.picker-tab[data-active="true"]::after {
+  content: '';
+  position: absolute;
+  left: 10%; right: 10%;
+  bottom: -5px;
+  height: 2px;
+  background: var(--ek-soil);
+  border-radius: 2px;
+}
+.picker-tab:focus-visible {
+  outline: 2px solid var(--ek-water);
+  outline-offset: 2px;
+}
+
+/* Plot-picker header: label + filter chip row. */
+.picker-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.picker-header-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.picker-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  flex: 1;
+}
+
+/* Block grouping for plot cards. */
+.picker-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.picker-block-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.picker-block-label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.picker-empty {
+  padding: var(--space-3);
+  font-size: 0.82rem;
+}
+
+/* Card grid — auto-fitting so both pickers reflow cleanly on narrow screens. */
+.picker-grid {
+  display: grid;
+  gap: 6px;
+}
+.picker-grid.variable-grid {
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+}
+.picker-grid.plot-grid {
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+}
+
+/* Shared card chrome. */
+.picker-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  min-height: 48px;
+  text-align: left;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.picker-card:hover {
+  border-color: var(--panel-border-strong);
+  background: var(--soil-04);
+}
+.picker-card:focus-visible {
+  outline: 2px solid var(--ek-water);
+  outline-offset: 1px;
+}
+
+/* Variable cards — label + unit, water-blue when selected. */
+.variable-card .picker-card-label { font-weight: 500; font-size: 0.82rem; }
+.variable-card .picker-card-unit  { color: var(--text-muted); font-size: 0.74rem; }
+.variable-card[data-active="true"] {
+  background: color-mix(in oklch, var(--ek-water) 10%, var(--panel-bg));
+  border-color: var(--ek-water);
+  box-shadow: inset 0 0 0 1px var(--ek-water);
+}
+.variable-card[data-active="true"] .picker-card-label { color: var(--text-primary); }
+
+/* Plot cards — genotype tint + dose border thickness always visible; a
+   stronger tint + outline marks the selected plot. */
+.plot-card .picker-card-id {
+  font-size: 0.80rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.plot-card .picker-card-sub {
+  font-size: 0.70rem;
+  color: var(--text-secondary);
+}
+
+.plot-card[data-geno="CCN51"] {
+  background: color-mix(in oklch, var(--ek-stem) 10%, var(--panel-bg));
+  border-color: color-mix(in oklch, var(--ek-stem-dark) 40%, var(--panel-border));
+}
+.plot-card[data-geno="PS1319"] {
+  background: color-mix(in oklch, var(--ek-berry) 10%, var(--panel-bg));
+  border-color: color-mix(in oklch, var(--ek-berry-dark) 40%, var(--panel-border));
+}
+.plot-card:hover[data-geno="CCN51"] {
+  background: color-mix(in oklch, var(--ek-stem) 16%, var(--panel-bg));
+  border-color: color-mix(in oklch, var(--ek-stem-dark) 60%, var(--panel-border));
+}
+.plot-card:hover[data-geno="PS1319"] {
+  background: color-mix(in oklch, var(--ek-berry) 16%, var(--panel-bg));
+  border-color: color-mix(in oklch, var(--ek-berry-dark) 60%, var(--panel-border));
+}
+
+.plot-card[data-dose-level="L"] { border-width: 1px; }
+.plot-card[data-dose-level="M"] { border-width: 1.6px; }
+.plot-card[data-dose-level="H"] { border-width: 2.4px; }
+
+.plot-card[data-active="true"][data-geno="CCN51"] {
+  background: color-mix(in oklch, var(--ek-stem) 28%, var(--panel-bg));
+  border-color: var(--ek-stem-dark);
+  box-shadow: inset 0 0 0 1px var(--ek-stem-dark);
+}
+.plot-card[data-active="true"][data-geno="PS1319"] {
+  background: color-mix(in oklch, var(--ek-berry) 28%, var(--panel-bg));
+  border-color: var(--ek-berry-dark);
+  box-shadow: inset 0 0 0 1px var(--ek-berry-dark);
+}
+
+/* Touch-target bump in high-contrast/sunlight mode — borders thicken for
+   visibility, card outlines switch to neutral so the tint doesn't wash out. */
+[data-theme="contrast"] .plot-card { background: var(--panel-bg); }
+[data-theme="contrast"] .plot-card[data-dose-level="L"] { border-width: 1.5px; }
+[data-theme="contrast"] .plot-card[data-dose-level="M"] { border-width: 2.5px; }
+[data-theme="contrast"] .plot-card[data-dose-level="H"] { border-width: 3.5px; }
 
 .depth-row {
   display: grid;
@@ -910,6 +1892,814 @@
   color: var(--text-muted);
   line-height: 1.4;
   font-style: italic;
+}
+
+/* ===== SYNC TAB =====
+   Instrument-panel layout: numbered sections (§01–§04), a readout strip for
+   offline status, a bundle manifest for Export, and an expected-files
+   checklist for Import. Section accents use the existing earthy OKLCH palette
+   via subtle background tints — no left-stripe borders, no cards-in-cards. */
+
+.sync-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 980px;
+}
+
+.sync-panel {
+  position: relative;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-card);
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+/* Per-section accent: a single soft top-to-bottom tint layered into the
+   panel background. Chosen to echo the sidebar's accent system. */
+.sync-panel[data-accent="water"] { background: linear-gradient(180deg, oklch(63% 0.072 240 / 0.045) 0%, var(--panel-bg) 45%); }
+.sync-panel[data-accent="stem"]  { background: linear-gradient(180deg, oklch(52% 0.082 145 / 0.050) 0%, var(--panel-bg) 45%); }
+.sync-panel[data-accent="seed"]  { background: linear-gradient(180deg, oklch(73% 0.105  65 / 0.060) 0%, var(--panel-bg) 45%); }
+.sync-panel[data-accent="berry"] { background: linear-gradient(180deg, oklch(55% 0.075 340 / 0.050) 0%, var(--panel-bg) 45%); }
+
+[data-theme="dark"] .sync-panel[data-accent="water"] { background: linear-gradient(180deg, oklch(68% 0.090 240 / 0.08) 0%, var(--panel-bg) 45%); }
+[data-theme="dark"] .sync-panel[data-accent="stem"]  { background: linear-gradient(180deg, oklch(68% 0.095 145 / 0.08) 0%, var(--panel-bg) 45%); }
+[data-theme="dark"] .sync-panel[data-accent="seed"]  { background: linear-gradient(180deg, oklch(78% 0.120  65 / 0.09) 0%, var(--panel-bg) 45%); }
+[data-theme="dark"] .sync-panel[data-accent="berry"] { background: linear-gradient(180deg, oklch(70% 0.085 340 / 0.09) 0%, var(--panel-bg) 45%); }
+
+/* Numbered section header — mono numeral sits to the left like a field-manual
+   index. Title is sentence case Archivo; subtitle is Archivo at body scale. */
+.sync-panel-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: var(--space-4);
+}
+.sync-index {
+  font-family: var(--font-mono);
+  font-size: 1.45rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  padding-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.sync-panel-title h2 {
+  font-family: var(--font-family);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+  line-height: 1.25;
+}
+.sync-panel-title p {
+  font-family: var(--font-family);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 68ch;
+}
+.sync-panel-title code {
+  font-family: var(--font-mono);
+  font-size: 0.80rem;
+  background: var(--soil-08);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* Status pill sits at the top-right of §01 */
+.sync-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px 5px 8px;
+  border-radius: 999px;
+  background: var(--soil-04);
+  border: 1px solid var(--panel-border);
+  font-family: var(--font-family);
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  align-self: center;
+}
+.sync-state-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ek-slate);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ek-slate) 22%, transparent);
+}
+.sync-state[data-state="fresh"]     .sync-state-dot { background: var(--ek-stem);       box-shadow: 0 0 0 3px color-mix(in oklch, var(--ek-stem) 22%, transparent); }
+.sync-state[data-state="behind"]    .sync-state-dot { background: var(--ek-seed);       box-shadow: 0 0 0 3px color-mix(in oklch, var(--ek-seed) 22%, transparent); }
+.sync-state[data-state="untouched"] .sync-state-dot { background: var(--ek-terracotta); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ek-terracotta) 22%, transparent); }
+.sync-state[data-state="empty"]     .sync-state-dot { background: var(--ek-slate);      box-shadow: 0 0 0 3px color-mix(in oklch, var(--ek-slate) 22%, transparent); }
+
+/* Big numeric readout strip — three channels, hairline dividers, mono figures.
+   The layout is asymmetric: the left cell is widest because pending changes is
+   the number the user actually cares about day-to-day. */
+.sync-readout {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1.2fr;
+  gap: 0;
+  padding: var(--space-4) var(--space-2);
+  border-top: 1px solid var(--panel-border);
+  border-bottom: 1px solid var(--panel-border);
+  background:
+    repeating-linear-gradient(90deg, transparent 0, transparent calc(33.33% - 1px), var(--panel-border) calc(33.33% - 1px), var(--panel-border) 33.33%);
+}
+.sync-readout-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 var(--space-4);
+  min-width: 0;
+}
+.sync-readout-cell:first-child { padding-left: var(--space-2); }
+.sync-readout-cell:last-child  { padding-right: var(--space-2); }
+.sync-readout-label {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.sync-readout-value {
+  font-family: var(--font-mono);
+  font-size: 2.35rem;
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sync-readout-value--sm { font-size: 1.25rem; font-weight: 600; }
+.sync-readout-never {
+  color: var(--ek-terracotta);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+[data-theme="dark"] .sync-readout-never { color: var(--ek-terracotta); }
+.sync-readout-sub {
+  font-family: var(--font-family);
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
+/* Action row: primary + optional secondary button */
+.sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.sync-actions .btn { flex: 0 1 auto; }
+
+/* Manifest and expected-file panels — slim two-column readouts with mono file
+   names and tabular counts. No inner cards; just an inset ruled table-ish block. */
+.sync-manifest {
+  background: var(--soil-04);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-control);
+  padding: var(--space-3) var(--space-4) var(--space-2);
+}
+.sync-manifest-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-2);
+  border-bottom: 1px solid var(--panel-border);
+}
+.sync-manifest-title {
+  font-family: var(--font-family);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.sync-manifest-meta {
+  font-family: var(--font-family);
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+.sync-manifest-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: var(--space-5);
+}
+.sync-manifest-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: 5px 0;
+  border-bottom: 1px dotted var(--panel-border);
+  font-size: 0.82rem;
+}
+.sync-manifest-row:last-child { border-bottom: none; }
+.sync-manifest-file {
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sync-manifest-rows {
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.sync-manifest-row[data-empty="true"] .sync-manifest-file,
+.sync-manifest-row[data-empty="true"] .sync-manifest-rows {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* Expected-files checklist — single column of mono filenames with a glyph
+   indicating whether the file has been seen in this session. */
+.sync-expect-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: var(--space-5);
+}
+.sync-expect-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px 0;
+  font-size: 0.82rem;
+  border-bottom: 1px dotted var(--panel-border);
+}
+.sync-expect-row:last-child { border-bottom: none; }
+.sync-expect-glyph {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.sync-expect-row[data-seen="true"] .sync-expect-glyph {
+  background: oklch(52% 0.082 145 / 0.18);
+  color: var(--ek-stem-dark);
+}
+[data-theme="dark"] .sync-expect-row[data-seen="true"] .sync-expect-glyph {
+  background: oklch(68% 0.095 145 / 0.22);
+  color: var(--ek-stem-dark);
+}
+.sync-expect-file {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sync-expect-row[data-seen="true"] .sync-expect-file { color: var(--text-primary); }
+
+/* Report chips: dense, text-only token list. No rounded bubbles; flat tags
+   that read as a contents manifest rather than UI candy. */
+.sync-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px var(--space-2);
+}
+.sync-chips li {
+  font-family: var(--font-family);
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  padding: 3px 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  background: var(--soil-04);
+  white-space: nowrap;
+}
+
+/* Busy indicator: fixed bottom-right toast with a simple spinner. Replaces
+   the previous inline muted-text approach, which was easy to miss. */
+.sync-busy {
+  position: fixed;
+  bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0));
+  right: var(--space-4);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 14px;
+  background: var(--ek-soil);
+  color: var(--ek-root);
+  border-radius: 999px;
+  font-family: var(--font-family);
+  font-size: 0.82rem;
+  box-shadow: var(--shadow-tooltip);
+  z-index: 150;
+}
+.sync-busy-spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in oklch, var(--ek-root) 30%, transparent);
+  border-top-color: var(--ek-root);
+  animation: sync-spin 0.9s linear infinite;
+}
+@keyframes sync-spin { to { transform: rotate(360deg); } }
+
+/* Tablet / touch adjustments — stack readout cells and manifest columns.
+   Keep the numbered index but push it above the title so the header can
+   breathe at narrower widths. */
+@media (max-width: 820px), (pointer: coarse) {
+  .sync-tab { gap: var(--space-3); }
+
+  .sync-panel {
+    padding: var(--space-4);
+    gap: var(--space-3);
+  }
+
+  .sync-panel-head {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+  .sync-index { font-size: 1.1rem; }
+  .sync-state { justify-self: start; }
+
+  .sync-readout {
+    grid-template-columns: 1fr;
+    background: none;
+    padding: var(--space-3) 0;
+  }
+  .sync-readout-cell {
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--panel-border);
+  }
+  .sync-readout-cell:last-child { border-bottom: none; }
+  .sync-readout-value { font-size: 2rem; }
+  .sync-readout-value--sm { font-size: 1.15rem; }
+
+  .sync-actions { flex-direction: column; align-items: stretch; }
+  .sync-actions .btn { width: 100%; justify-content: center; }
+
+  .sync-manifest-list,
+  .sync-expect-list { grid-template-columns: 1fr; }
+}
+
+/* High-contrast (sunlight) mode — strip the gradient tint so the surface
+   stays pure white; bring dividers to full weight. */
+[data-theme="contrast"] .sync-panel { background: var(--panel-bg); }
+[data-theme="contrast"] .sync-readout {
+  background: none;
+  border-top-color: var(--text-primary);
+  border-bottom-color: var(--text-primary);
+}
+[data-theme="contrast"] .sync-manifest { border-color: var(--text-primary); }
+[data-theme="contrast"] .sync-state { border-color: var(--text-primary); }
+
+/* ============================================================
+   DATA ENTRY SPLIT-PANE (iPad Pro first)
+   ============================================================
+   Left "session" pane hosts shared context (date, observer) and
+   the plot matrix picker. Right "detail" pane opens when a plot
+   is selected and can be collapsed (preserving data) or closed
+   (wipes the in-progress record and unselects the plot). Layout
+   is tuned so a 1194x834 iPad Pro in landscape fits one tree
+   or one plot's detail without vertical scroll.
+   ============================================================ */
+
+.entry-layout {
+  display: grid;
+  grid-template-columns: minmax(420px, 40%) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+.entry-layout[data-has-selection="false"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.entry-layout[data-collapsed="true"] {
+  /* When minimized the detail column shrinks to just the header strip. */
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+}
+
+.entry-session {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.session-card { padding: var(--space-3) var(--space-4); }
+.session-fields {
+  /* Two equal columns for date + sampler; the progress bar spans the
+     full row beneath so its "Trees entered 576 / 576" label always has
+     room no matter how narrow the left pane is. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: end;
+}
+.session-fields .field label { font-size: 0.78rem; }
+.session-fields .field input {
+  min-height: 40px;
+  padding: 6px var(--space-3);
+  font-size: 0.92rem;
+  min-width: 0;
+}
+.session-progress {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 2px;
+  min-width: 0;
+}
+.session-progress .entry-progress {
+  /* The default .entry-progress sets min-width: 200px for a flex context;
+     inside this grid we want it to shrink to the track instead. */
+  min-width: 0;
+  flex: initial;
+}
+
+.matrix-card {
+  padding: var(--space-3) var(--space-4);
+  /* Keep the matrix compact so it doesn't push the detail pane below the fold. */
+}
+
+/* ── Plot matrix ─────────────────────────────────────────────────────── */
+.plot-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.matrix-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.matrix-grid {
+  display: grid;
+  /* grid-template-columns set inline per-instance */
+  gap: 4px;
+  align-items: stretch;
+}
+.matrix-corner {
+  /* Top-left empty cell aligning with row labels. */
+  min-height: 22px;
+}
+.matrix-geno-head {
+  font-family: var(--font-family);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 2px 6px 4px;
+  border-bottom: 1px solid var(--panel-border);
+  transition: opacity 0.15s ease;
+}
+.matrix-geno-head[data-geno="CCN51"]  { color: var(--chip-text-stem); }
+.matrix-geno-head[data-geno="PS1319"] { color: var(--chip-text-berry); }
+.matrix-geno-head[data-faded="true"]  { opacity: 0.32; }
+
+.matrix-dose-head {
+  font-size: 0.64rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 2px 2px 4px;
+  border-bottom: 1px dashed var(--panel-border);
+  letter-spacing: 0.02em;
+  transition: opacity 0.15s ease;
+}
+.matrix-dose-head[data-faded="true"] { opacity: 0.32; }
+
+.matrix-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: var(--space-2);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.matrix-cell {
+  /* Reuses .plot-card chrome (geno tint, dose border weight) but compact. */
+  min-height: 36px;
+  padding: 3px 4px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  position: relative;
+  transition: opacity 0.15s ease, transform 0.1s ease, background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.matrix-cell[data-faded="true"] {
+  opacity: 0.25;
+  pointer-events: none;
+}
+.matrix-cell:hover:not([data-faded="true"]) { transform: translateY(-1px); }
+.matrix-cell .matrix-cell-badge {
+  font-size: 0.64rem;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--soil-08);
+  color: var(--text-secondary);
+  line-height: 1.1;
+}
+.matrix-cell .matrix-cell-badge[data-tone="progress"] {
+  background: oklch(from var(--ek-seed) l c h / 0.2);
+  color: var(--chip-text-seed);
+}
+.matrix-cell .matrix-cell-badge[data-tone="done"] {
+  background: oklch(from var(--ek-stem) l c h / 0.22);
+  color: var(--chip-text-stem);
+}
+.matrix-empty {
+  min-height: 36px;
+  border: 1px dashed var(--panel-border);
+  border-radius: 5px;
+  opacity: 0.4;
+}
+
+/* ── Detail pane ────────────────────────────────────────────────────── */
+.entry-detail {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-card);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.detail-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--soil-04);
+  border-bottom: 1px solid var(--panel-border);
+}
+.detail-head-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.detail-head-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.detail-head-title .mono { font-size: 1rem; }
+.detail-head-meta {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+/* Large "where am I" pill — uses the water-blue accent so it jumps out
+   from the mostly-neutral header chrome. */
+.detail-head-progress {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: oklch(from var(--ek-water) l c h / 0.12);
+  border: 1px solid oklch(from var(--ek-water) l c h / 0.35);
+  color: var(--text-primary);
+  line-height: 1;
+  flex-shrink: 0;
+}
+.detail-head-progress .detail-progress-label {
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.detail-head-progress .detail-progress-value {
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 1.6ch;
+  text-align: right;
+}
+.detail-head-progress .detail-progress-sep {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.detail-head-progress .detail-progress-total {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.detail-head-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--panel-border-strong);
+  background: var(--panel-bg);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.detail-head-btn:hover,
+.detail-head-btn:focus-visible {
+  background: var(--soil-08);
+  color: var(--text-primary);
+  border-color: var(--panel-border-strong);
+}
+.detail-head-btn.danger {
+  color: var(--danger);
+  border-color: oklch(from var(--danger) l c h / 0.4);
+}
+.detail-head-btn.danger:hover,
+.detail-head-btn.danger:focus-visible {
+  background: oklch(from var(--danger) l c h / 0.12);
+  border-color: oklch(from var(--danger) l c h / 0.6);
+  color: var(--danger);
+}
+
+.detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  min-width: 0;
+}
+.detail-body .m-group { margin: 0; }
+
+/* Compact measurement inputs inside the detail pane. The global .big-input
+   uses a 1.8 rem font for bay-sized solo inputs; inside the split-pane
+   detail we have 3-4 columns per row, so we scale down to avoid clipping
+   five-digit values against the unit suffix. */
+.detail-body .big-input {
+  font-size: 1.3rem;
+  min-height: 52px;
+  padding: var(--space-2) var(--space-2);
+}
+.detail-body .m-field-input input { padding-right: 34px; }
+.detail-body .m-field-unit {
+  font-size: 0.78rem;
+  right: 8px;
+}
+.detail-body .m-field { min-width: 0; }
+
+.notes-field label { font-size: 0.78rem; }
+.notes-field input { min-height: 36px; }
+
+.detail-footer {
+  display: flex;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--panel-border);
+}
+.detail-footer .btn {
+  flex: 1;
+  justify-content: center;
+  min-height: 48px;
+  font-size: 1rem;
+}
+
+/* Collapsed detail pane — keep header visible as a thin strip; hide body. */
+.entry-layout[data-collapsed="true"] .detail-body { display: none; }
+.entry-layout[data-collapsed="true"] .entry-detail {
+  align-self: start;
+}
+
+/* ── Soil-specific depth rows inside the detail pane ────────────────── */
+.soil-depths {
+  display: flex;
+  flex-direction: column;
+}
+.soil-depths .depth-row {
+  grid-template-columns: 60px repeat(5, 1fr);
+  gap: var(--space-2);
+}
+.soil-depths .depth-row .field input,
+.soil-depths .depth-row .field select {
+  min-height: 36px;
+  padding: 6px var(--space-2);
+  font-size: 0.92rem;
+}
+.soil-depths .depth-row .field.big-input,
+.soil-depths .depth-row .big-input {
+  font-size: 1.05rem;
+  padding: 6px var(--space-2);
+  min-height: 36px;
+}
+
+/* ── BD depth rows (plot-first flow) ─────────────────────────────────── */
+.bd-depth-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.bd-depth-row {
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--soil-04);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.bd-depth-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border-strong);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.bd-row-body {
+  display: grid;
+  grid-template-columns: minmax(150px, 180px) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: end;
+}
+.bd-ring-picker select {
+  min-height: 40px;
+  font-size: 1rem;
+}
+.bd-notes-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: center;
+}
+.bd-notes-label {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+.bd-notes-row input {
+  min-height: 32px;
+  padding: 4px var(--space-2);
+  font-size: 0.9rem;
+}
+@media (max-width: 900px) {
+  .bd-row-body { grid-template-columns: 1fr; }
+}
+
+/* ── Responsive stacking ────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .entry-layout,
+  .entry-layout[data-has-selection="false"],
+  .entry-layout[data-collapsed="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .matrix-cell { min-height: 44px; }
+  .matrix-row-head { font-size: 0.78rem; padding-right: 6px; }
+  .soil-depths .depth-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .session-fields { grid-template-columns: 1fr; }
+  .detail-footer .btn { font-size: 0.92rem; min-height: 44px; }
 }
 
 /* ===== REDUCED MOTION ===== */

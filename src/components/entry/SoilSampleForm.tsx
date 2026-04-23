@@ -1,14 +1,50 @@
 import { useId, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Save, X } from "lucide-react";
 import { useStoreItems, useDebouncedSave } from "../../utils/useStoreItems";
-import { PlotPicker, ProgressBar, Stepper, isoDate, num, str } from "./shared";
+import {
+  PlotMatrix, ProgressBar, DetailPaneHeader,
+  isoDate, num, str, type PlotBadge,
+} from "./shared";
 import type { Plot } from "../../types/design";
 import type { SoilSample } from "../../types/samples";
 import { loadPlan } from "../../utils/planStorage";
+import { planCounts } from "../../types/plan";
 
 const COMPOSITING_PATTERNS = ["W", "X", "zigzag", "grid", "random"];
 
 function isEntered(s?: SoilSample): boolean {
   return !!s?.sampling_date;
+}
+
+function hasAnyValue(s?: SoilSample): boolean {
+  if (!s) return false;
+  return (
+    s.sampling_date != null ||
+    s.sampler != null ||
+    s.n_subsamples != null ||
+    s.compositing_pattern != null ||
+    s.moisture_visual != null ||
+    s.notes != null ||
+    s.coarse_fragments_pct != null
+  );
+}
+
+/** Small × button that clears one field. Tab-disabled when nothing to clear. */
+function ClearBtn({ label, disabled, onClick }: {
+  label: string; disabled: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="m-field-clear m-field-clear--inline"
+      aria-label={`Clear ${label}`}
+      disabled={disabled}
+      tabIndex={disabled ? -1 : 0}
+      onClick={onClick}
+    >
+      <X size={12} />
+    </button>
+  );
 }
 
 function DepthRow({
@@ -27,7 +63,14 @@ function DepthRow({
     <div className="depth-row">
       <div className="depth-label">{s.depth_label} cm</div>
       <div className="field">
-        <label htmlFor={dateId}>Date</label>
+        <div className="m-field-head">
+          <label htmlFor={dateId}>Date</label>
+          <ClearBtn
+            label="date"
+            disabled={s.sampling_date == null}
+            onClick={() => onPatch(s.sample_id, { sampling_date: undefined })}
+          />
+        </div>
         <input
           id={dateId}
           type="date"
@@ -36,7 +79,14 @@ function DepthRow({
         />
       </div>
       <div className="field">
-        <label htmlFor={subsamplesId}>Subsamples</label>
+        <div className="m-field-head">
+          <label htmlFor={subsamplesId}>Subsamples</label>
+          <ClearBtn
+            label="subsamples"
+            disabled={s.n_subsamples == null}
+            onClick={() => onPatch(s.sample_id, { n_subsamples: undefined })}
+          />
+        </div>
         <input
           id={subsamplesId}
           className="big-input"
@@ -50,7 +100,14 @@ function DepthRow({
         />
       </div>
       <div className="field">
-        <label htmlFor={patternId}>Pattern</label>
+        <div className="m-field-head">
+          <label htmlFor={patternId}>Pattern</label>
+          <ClearBtn
+            label="pattern"
+            disabled={s.compositing_pattern == null}
+            onClick={() => onPatch(s.sample_id, { compositing_pattern: undefined })}
+          />
+        </div>
         <select
           id={patternId}
           value={s.compositing_pattern ?? ""}
@@ -63,7 +120,14 @@ function DepthRow({
         </select>
       </div>
       <div className="field">
-        <label htmlFor={moistureId}>Moisture</label>
+        <div className="m-field-head">
+          <label htmlFor={moistureId}>Moisture</label>
+          <ClearBtn
+            label="moisture"
+            disabled={s.moisture_visual == null}
+            onClick={() => onPatch(s.sample_id, { moisture_visual: undefined })}
+          />
+        </div>
         <input
           id={moistureId}
           type="text"
@@ -73,7 +137,14 @@ function DepthRow({
         />
       </div>
       <div className="field">
-        <label htmlFor={notesId}>Notes</label>
+        <div className="m-field-head">
+          <label htmlFor={notesId}>Notes</label>
+          <ClearBtn
+            label="notes"
+            disabled={s.notes == null}
+            onClick={() => onPatch(s.sample_id, { notes: undefined })}
+          />
+        </div>
         <input
           id={notesId}
           type="text"
@@ -90,11 +161,14 @@ export function SoilSampleForm() {
   const samples = useStoreItems<SoilSample>("soil_samples", "sample_id");
   const debouncedSave = useDebouncedSave(samples.saveItem, "sample_id", 350);
 
+  const [sessionDate, setSessionDate] = useState<string>("");
+  const [sessionSampler, setSessionSampler] = useState<string>("");
   const [selectedPlot, setSelectedPlot] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
-  const allDateId = useId();
-  const allSamplerId = useId();
+  const sessionDateId = useId();
+  const sessionSamplerId = useId();
 
   const sortedPlots = useMemo(
     () => [...plots.items].sort((a, b) => a.plot_id.localeCompare(b.plot_id)),
@@ -110,6 +184,27 @@ export function SoilSampleForm() {
   }, [samples.items, selectedPlot]);
 
   const totalEntered = useMemo(() => samples.items.filter(isEntered).length, [samples.items]);
+  const expectedTotal = planCounts(loadPlan()).soil_samples;
+
+  const enteredByPlot = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const s of samples.items) {
+      if (!isEntered(s)) continue;
+      m.set(s.plot_id, (m.get(s.plot_id) ?? 0) + 1);
+    }
+    return m;
+  }, [samples.items]);
+
+  const depthsPerPlot = loadPlan().depths.length;
+
+  function plotBadge(plot_id: string): PlotBadge | null {
+    const done = enteredByPlot.get(plot_id) ?? 0;
+    if (done === 0) return null;
+    return {
+      text: `${done}/${depthsPerPlot}`,
+      tone: done >= depthsPerPlot ? "done" : "progress",
+    };
+  }
 
   if (plots.loading || samples.loading) {
     return <div className="card"><div className="muted">Loading...</div></div>;
@@ -118,89 +213,148 @@ export function SoilSampleForm() {
     return <div className="card"><div className="muted">No plots yet. Seed the factorial from the Overview tab.</div></div>;
   }
 
-  function patch(sample_id: string, partial: Partial<SoilSample>) {
+  function ensureSample(sample_id: string): SoilSample | null {
     const existing = samples.items.find(s => s.sample_id === sample_id);
-    if (!existing) {
-      const depthCode = sample_id.split("_").pop();
-      const depth = loadPlan().depths.find(d => d.code === depthCode);
-      if (!depth || !selectedPlot) return;
-      const next: SoilSample = {
-        sample_id,
-        plot_id: selectedPlot,
-        depth_label: depth.label,
-        depth_top_cm: depth.top,
-        depth_bottom_cm: depth.bottom,
-        ...partial,
-      };
-      samples.replaceLocal(next);
-      debouncedSave(next);
-    } else {
-      const next = { ...existing, ...partial };
-      samples.replaceLocal(next);
-      debouncedSave(next);
-    }
+    if (existing) return existing;
+    const depthCode = sample_id.split("_").pop();
+    const depth = loadPlan().depths.find(d => d.code === depthCode);
+    if (!depth || !selectedPlot) return null;
+    return {
+      sample_id,
+      plot_id: selectedPlot,
+      depth_label: depth.label,
+      depth_top_cm: depth.top,
+      depth_bottom_cm: depth.bottom,
+    };
+  }
+
+  function patch(sample_id: string, partial: Partial<SoilSample>) {
+    const base = ensureSample(sample_id);
+    if (!base) return;
+    // Session-level date/sampler propagate forward but never overwrite.
+    const next: SoilSample = {
+      ...base,
+      sampling_date: base.sampling_date ?? (sessionDate || undefined),
+      sampler: base.sampler ?? (sessionSampler || undefined),
+      ...partial,
+    };
+    samples.replaceLocal(next);
+    debouncedSave(next);
     setSavedAt(Date.now());
   }
 
-  function applyToAllDepths(field: keyof SoilSample, value: string | undefined) {
-    for (const s of plotSamples) patch(s.sample_id, { [field]: value } as Partial<SoilSample>);
+  function closeAndClear() {
+    const entered = plotSamples.filter(hasAnyValue);
+    if (entered.length > 0) {
+      const ok = window.confirm(
+        `Close and clear all soil entries for ${selectedPlot}? ${entered.length} depth record(s) will be deleted.`
+      );
+      if (!ok) return;
+      for (const s of entered) samples.deleteItem(s.sample_id);
+    }
+    setSelectedPlot(null);
+    setCollapsed(false);
   }
 
+  const hasSelection = !!selectedPlot;
+  const plotDone = selectedPlot ? enteredByPlot.get(selectedPlot) ?? 0 : 0;
+
   return (
-    <div className="column" style={{ gap: 14 }}>
-      <div className="card">
-        <h2 className="card-title">Select plot</h2>
-        <PlotPicker
-          plots={plots.items}
-          value={selectedPlot}
-          onChange={(id) => setSelectedPlot(id)}
-        />
-      </div>
-
-      {selectedPlot && (
-        <div className="card">
-          <div className="entry-toolbar">
-            <ProgressBar value={totalEntered} total={192} label="Overall soil samples" />
-          </div>
-
-          <div className="field-grid" style={{ marginBottom: 12 }}>
+    <div
+      className="entry-layout"
+      data-has-selection={hasSelection ? "true" : "false"}
+      data-collapsed={collapsed ? "true" : "false"}
+    >
+      <section className="entry-session">
+        <div className="card session-card">
+          <div className="session-fields">
             <div className="field">
-              <label htmlFor={allDateId}>Sampling date (applies to all 4 depths)</label>
+              <label htmlFor={sessionDateId}>Sampling date</label>
               <input
-                id={allDateId}
+                id={sessionDateId}
                 type="date"
-                onChange={e => applyToAllDepths("sampling_date", e.target.value || undefined)}
+                value={sessionDate}
+                onChange={e => setSessionDate(e.target.value)}
               />
             </div>
             <div className="field">
-              <label htmlFor={allSamplerId}>Sampler (applies to all 4 depths)</label>
+              <label htmlFor={sessionSamplerId}>Sampler</label>
               <input
-                id={allSamplerId}
+                id={sessionSamplerId}
                 type="text"
-                onChange={e => applyToAllDepths("sampler", e.target.value || undefined)}
+                placeholder="initials"
+                value={sessionSampler}
+                onChange={e => setSessionSampler(e.target.value)}
               />
             </div>
+            <div className="session-progress">
+              <ProgressBar value={totalEntered} total={expectedTotal} label="Soil samples entered" />
+            </div>
           </div>
+        </div>
 
-          <h2 className="card-title" style={{ marginTop: 4 }}>Per-depth details</h2>
-          {plotSamples.map(s => (
-            <DepthRow key={s.sample_id} s={s} onPatch={patch} />
-          ))}
-
-          <Stepper
-            index={plotIdx}
-            total={sortedPlots.length}
-            onPrev={() => {
-              const p = sortedPlots[Math.max(0, plotIdx - 1)];
-              if (p) setSelectedPlot(p.plot_id);
-            }}
-            onNext={() => {
-              const p = sortedPlots[Math.min(sortedPlots.length - 1, plotIdx + 1)];
-              if (p) setSelectedPlot(p.plot_id);
-            }}
-            savedAt={savedAt}
+        <div className="card matrix-card">
+          <PlotMatrix
+            plots={plots.items}
+            value={selectedPlot}
+            onChange={(id) => { setSelectedPlot(id); setCollapsed(false); }}
+            getBadge={plotBadge}
           />
         </div>
+      </section>
+
+      {hasSelection && (
+        <section className="entry-detail">
+          <DetailPaneHeader
+            title={<span className="mono">{selectedPlot}</span>}
+            meta={<>Plot <span className="mono">{plotIdx + 1}/{sortedPlots.length}</span></>}
+            progress={
+              <>
+                <span className="detail-progress-label">Depths</span>
+                <span className="detail-progress-value mono">{plotDone}</span>
+                <span className="detail-progress-sep">/</span>
+                <span className="detail-progress-total mono">{depthsPerPlot}</span>
+              </>
+            }
+            collapsed={collapsed}
+            onToggleCollapse={() => setCollapsed(c => !c)}
+            onClose={closeAndClear}
+            savedAt={savedAt}
+          />
+
+          {!collapsed && (
+            <div className="detail-body">
+              <div className="soil-depths">
+                {plotSamples.map(s => (
+                  <DepthRow key={s.sample_id} s={s} onPatch={patch} />
+                ))}
+              </div>
+
+              <div className="detail-footer">
+                <button
+                  className="btn"
+                  onClick={() => {
+                    const p = sortedPlots[Math.max(0, plotIdx - 1)];
+                    if (p) setSelectedPlot(p.plot_id);
+                  }}
+                  disabled={plotIdx <= 0}
+                >
+                  <ChevronLeft size={18} /> Prev plot
+                </button>
+                <button
+                  className="btn primary"
+                  onClick={() => {
+                    const p = sortedPlots[Math.min(sortedPlots.length - 1, plotIdx + 1)];
+                    if (p) setSelectedPlot(p.plot_id);
+                  }}
+                  disabled={plotIdx >= sortedPlots.length - 1}
+                >
+                  <Save size={16} /> Save &amp; next <ChevronRight size={18} />
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
       )}
     </div>
   );

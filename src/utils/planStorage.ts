@@ -34,11 +34,15 @@ export function loadPlan(): SamplingPlan {
   }
 }
 
+export const PLAN_CHANGE_EVENT = "mccs:plan-change";
+
 export function savePlan(plan: SamplingPlan): void {
   localStorage.setItem(KEY, JSON.stringify(plan));
+  window.dispatchEvent(new CustomEvent(PLAN_CHANGE_EVENT));
 }
 
 export function resetPlan(): SamplingPlan {
   localStorage.removeItem(KEY);
+  window.dispatchEvent(new CustomEvent(PLAN_CHANGE_EVENT));
   return { ...DEFAULT_PLAN };
 }

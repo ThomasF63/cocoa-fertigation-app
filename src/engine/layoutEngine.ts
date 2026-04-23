@@ -1,6 +1,7 @@
 // Deterministic generation of the 48-plot factorial and 576 central trees.
-// Each plot holds 12 central cocoa trees in a 2 x 6 double row (mirrors the
-// field planting pattern). Blocks are arranged 2 x 4 on wide screens.
+// Each plot holds 12 central cocoa trees in a 6 x 2 double row running
+// north–south (mirrors the field planting pattern). Blocks are arranged
+// 4 x 2 on wide screens.
 
 import {
   DOSE_N_KG_HA_YR,
@@ -69,9 +70,13 @@ export function generateTrees(plots: Plot[] = generatePlots()): Tree[] {
 }
 
 // ------ Screen layout ------
-// Blocks are arranged in a 2 x 4 grid on wide screens. Inside each block,
-// the six treatment plots are arranged as 2 rows (genotype) x 3 cols (dose).
-// Within each plot, 12 central trees form a 3 x 4 grid.
+// Blocks are arranged in a 4 x 2 grid on wide screens. Inside each block,
+// the six treatment plots are arranged as 3 rows (dose) x 2 cols (genotype),
+// with genotype flipped between adjacent dose rows so each N–S column
+// alternates CCN 51 / PS 13.19 while each W–E row stays on a single dose
+// (single fertigation manifold). Within each plot, 12 central trees form a
+// 6 x 2 grid so the double rows run vertically (north–south), matching the
+// field planting orientation.
 
 export interface PlotLayoutCell {
   plot_id: string;
@@ -104,14 +109,14 @@ export interface LayoutConfig {
 }
 
 export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
-  blockGridCols: 2,
-  plotsPerBlockCols: 3,
-  plotsPerBlockRows: 2,
-  plotW: 240,
-  plotH: 90,
+  blockGridCols: 4,
+  plotsPerBlockCols: 2,   // genotypes across columns
+  plotsPerBlockRows: 3,   // doses down rows
+  plotW: 120,
+  plotH: 240,
   blockGap: 30,
   plotGap: 8,
-  treeMargin: 18,
+  treeMargin: 30,
   treeRadius: 5,
 };
 
@@ -137,20 +142,24 @@ export function computeFieldLayout(
     const blockOriginX = blockCol * (blockW + blockGap);
     const blockOriginY = blockRow * (blockH + blockGap);
 
-    const genotypeRow = p.genotype === "CCN51" ? 0 : 1;
-    const doseCol = p.dose_code === "L" ? 0 : p.dose_code === "M" ? 1 : 2;
+    const doseRow = p.dose_code === "L" ? 0 : p.dose_code === "M" ? 1 : 2;
+    // Flip the CCN 51 / PS 13.19 positions between dose rows so each
+    // vertical double row alternates genotype N→S, while every W–E row
+    // keeps a single dose for fertigation.
+    const ccnCol = doseRow % 2 === 0 ? 0 : 1;
+    const genotypeCol = p.genotype === "CCN51" ? ccnCol : 1 - ccnCol;
 
-    const x = blockOriginX + doseCol * (plotW + plotGap);
-    const y = blockOriginY + genotypeRow * (plotH + plotGap);
+    const x = blockOriginX + genotypeCol * (plotW + plotGap);
+    const y = blockOriginY + doseRow * (plotH + plotGap);
 
-    // 12 trees: 2 rows x 6 cols (double row, as planted in the field).
-    // Rows are shifted toward the bottom of the plot to leave headroom at the
-    // top for the plot label.
-    const rows = 2, cols = 6;
-    const labelReserve = 32;
+    // 12 trees: 6 rows x 2 cols (double row running north–south, as
+    // planted in the field). Rows are shifted downward to leave headroom at
+    // the top of the plot for the plot label.
+    const rows = 6, cols = 2;
+    const labelReserve = 36;
     const usableW = plotW - 2 * treeMargin;
     const usableH = plotH - treeMargin - labelReserve;
-    const dx = usableW / (cols - 1);
+    const dx = cols > 1 ? usableW / (cols - 1) : 0;
     const dy = rows > 1 ? usableH / (rows - 1) : 0;
 
     const trees = [] as { tree_id: string; cx: number; cy: number }[];

@@ -12,6 +12,14 @@ function stars(p: number | null): string {
   return "";
 }
 
+function sigClass(p: number | null): string {
+  if (p === null || !Number.isFinite(p)) return "";
+  if (p < 0.001) return "sig-strong";
+  if (p < 0.01)  return "sig-med";
+  if (p < 0.05)  return "sig-weak";
+  return "";
+}
+
 function fmtP(p: number | null): string {
   if (p === null) return "-";
   if (p < 0.001) return "<0.001";
@@ -45,24 +53,15 @@ export function MixedEffectsPanel({ obs, depthResolved, label, unit }: {
 
   return (
     <>
-      <div className="row" style={{ flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
-        <div className="stat"><span className="stat-label">Design</span><span className="stat-value" style={{ fontSize: "1rem" }}>{result.design}</span></div>
-        <div className="stat"><span className="stat-label">Model n</span><span className="stat-value">{result.anova.n}</span></div>
-        <div className="stat"><span className="stat-label">Outcome</span><span className="stat-value" style={{ fontSize: "1rem" }}>{label}{unit ? ` (${unit})` : ""}</span></div>
+      <div className="inline-stats mono">
+        <span>{result.design}</span>
+        <span><em>n</em> = {result.anova.n}</span>
+        <span className="muted">{label}{unit ? ` (${unit})` : ""}</span>
+        <span className="muted" style={{ flex: "1 1 100%" }}>
+          <code className="mono">{result.formula}</code>
+        </span>
       </div>
 
-      <div style={{
-        background: "var(--soil-04)",
-        border: "1px solid var(--panel-border)",
-        borderRadius: "var(--radius-control)",
-        padding: "var(--space-3) var(--space-4)",
-        marginBottom: 10,
-      }}>
-        <h2 className="card-title">Model</h2>
-        <code className="mono">{result.formula}</code>
-      </div>
-
-      <h2 className="card-title" style={{ marginTop: 10 }}>F-tests with appropriate error strata</h2>
       <div style={{ overflow: "auto" }}>
         <table className="data-table">
           <thead>
@@ -75,15 +74,19 @@ export function MixedEffectsPanel({ obs, depthResolved, label, unit }: {
               const strat = result.stratum_for_term[t.term] ?? "residual";
               const isErrorRow = t.term.startsWith("block:") && t.term !== "block";
               return (
-                <tr key={i} style={isErrorRow ? { color: "var(--text-muted)" } : undefined}>
+                <tr
+                  key={i}
+                  className={isErrorRow ? "" : sigClass(t.p)}
+                  style={isErrorRow ? { color: "var(--text-muted)" } : undefined}
+                >
                   <td className="mono">{t.term}{isErrorRow ? " (error stratum)" : ""}</td>
                   <td className="mono">{t.df}</td>
                   <td className="mono">{sig(t.ss)}</td>
                   <td className="mono">{sig(t.ms)}</td>
                   <td className="mono">{t.f === null ? "-" : sig(t.f)}</td>
                   <td className="mono">{isErrorRow ? "-" : stratumLabel(strat)}</td>
-                  <td className="mono">{fmtP(t.p)}</td>
-                  <td className="mono">{stars(t.p)}</td>
+                  <td className="mono sig-pcell">{fmtP(t.p)}</td>
+                  <td className="mono sig-stars">{stars(t.p)}</td>
                 </tr>
               );
             })}
@@ -98,34 +101,20 @@ export function MixedEffectsPanel({ obs, depthResolved, label, unit }: {
         </table>
       </div>
 
-      <h2 className="card-title" style={{ marginTop: 14 }}>Variance components</h2>
-      <div className="stat-grid">
-        <div className="stat">
-          <span className="stat-label">Whole-plot</span>
-          <span className="stat-value">{sig(result.variance_components.wholePlotError.value)}</span>
-          <span className="stat-sub">{result.variance_components.wholePlotError.label}</span>
-        </div>
+      <div className="variance-row mono">
+        <span className="var-label">Variance components:</span>
+        <span><strong>whole-plot</strong> {sig(result.variance_components.wholePlotError.value)}</span>
         {result.variance_components.subPlotError && (
-          <div className="stat">
-            <span className="stat-label">Sub-plot</span>
-            <span className="stat-value">{sig(result.variance_components.subPlotError.value)}</span>
-            <span className="stat-sub">{result.variance_components.subPlotError.label}</span>
-          </div>
+          <span><strong>sub-plot</strong> {sig(result.variance_components.subPlotError.value)}</span>
         )}
-        <div className="stat">
-          <span className="stat-label">Residual</span>
-          <span className="stat-value">{sig(result.variance_components.residual.value)}</span>
-          <span className="stat-sub">{result.variance_components.residual.label}</span>
-        </div>
+        <span><strong>residual</strong> {sig(result.variance_components.residual.value)}</span>
       </div>
 
-      <div className="muted" style={{ fontSize: "0.75rem", marginTop: 14, lineHeight: 1.6 }}>
-        <strong>Note on interpretation.</strong> The F-tests above use the correct error strata for a split-{result.design === "split-split-plot" ? "split-" : ""}plot design with block as a random effect: {result.design === "split-split-plot"
-          ? "genotype is tested against block x genotype; dose and genotype:dose are tested against block x genotype x dose; depth and its interactions are tested against residual."
-          : "genotype is tested against block x genotype; dose and genotype:dose are tested against residual."
-        } For balanced data, these F-tests are numerically equivalent to a REML mixed model with block as a random effect. Variance components shown are method-of-moments estimates, which also coincide with REML for balanced designs.
-        <br/><br/>
-        If you need unbalanced-data mixed models, lmerTest-style Satterthwaite df, or continuous covariates, export the CSVs and run <span className="mono">lme4::lmer()</span> externally; the data model is identical.
+      <div className="muted caption">
+        Correct error strata for split-{result.design === "split-split-plot" ? "split-" : ""}plot with block as random: {result.design === "split-split-plot"
+          ? "genotype vs block×genotype; dose and genotype:dose vs block×genotype×dose; depth and its interactions vs residual."
+          : "genotype vs block×genotype; dose and genotype:dose vs residual."
+        } For balanced data these F-tests match <span className="mono">lmer</span> REML; variance components are method-of-moments (≡ REML when balanced).
       </div>
 
       {result.warnings.length > 0 && (

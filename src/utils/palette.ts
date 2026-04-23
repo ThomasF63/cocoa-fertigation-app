@@ -3,7 +3,7 @@
 // Values are CSS custom-property references so SVG fills/strokes adapt to the
 // active theme (light / dark / contrast). Dark-mode overrides live in tokens.css.
 
-import type { GenotypeCode, DoseCode } from "../types/design";
+import type { GenotypeCode, DoseCode, GenotypeLabel } from "../types/design";
 
 export const TOKENS = {
   soil:       "var(--text-primary)",
@@ -39,4 +39,16 @@ export const DOSE_LABEL: Record<DoseCode, string> = {
   L: "56",
   M: "226",
   H: "340",
+};
+
+// Reverse lookups for UI chips that receive labels/kg-values rather than codes.
+export const DOSE_CODE_BY_KG: Record<number, DoseCode> = {
+  56: "L",
+  226: "M",
+  340: "H",
+};
+
+export const GENOTYPE_CODE_BY_LABEL: Record<GenotypeLabel, GenotypeCode> = {
+  "CCN 51":  "CCN51",
+  "PS 13.19": "PS1319",
 };

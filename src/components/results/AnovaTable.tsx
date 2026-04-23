@@ -13,6 +13,15 @@ function stars(p: number | null): string {
   return "";
 }
 
+/** Row class keying background intensity to significance (p < 0.05 threshold). */
+function sigClass(p: number | null): string {
+  if (p === null || !Number.isFinite(p)) return "";
+  if (p < 0.001) return "sig-strong";
+  if (p < 0.01)  return "sig-med";
+  if (p < 0.05)  return "sig-weak";
+  return "";
+}
+
 function fmtP(p: number | null): string {
   if (p === null) return "-";
   if (p < 0.001) return "<0.001";
@@ -60,11 +69,11 @@ export function AnovaTable({ obs, depthResolved, label, unit }: {
 
   return (
     <>
-      <div className="row" style={{ flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
-        <div className="stat"><span className="stat-label">Model n</span><span className="stat-value">{result.n}</span></div>
-        <div className="stat"><span className="stat-label">R<sup>2</sup></span><span className="stat-value">{sig(result.r_squared)}</span></div>
-        <div className="stat"><span className="stat-label">Residual df</span><span className="stat-value">{result.residual.df}</span></div>
-        <div className="stat"><span className="stat-label">Outcome</span><span className="stat-value" style={{ fontSize: "1rem" }}>{label}{unit ? ` (${unit})` : ""}</span></div>
+      <div className="inline-stats mono">
+        <span><em>n</em> = {result.n}</span>
+        <span>R<sup>2</sup> = {sig(result.r_squared)}</span>
+        <span>df<sub>res</sub> = {result.residual.df}</span>
+        <span className="muted">{label}{unit ? ` (${unit})` : ""}</span>
       </div>
 
       <div style={{ overflow: "auto" }}>
@@ -76,14 +85,14 @@ export function AnovaTable({ obs, depthResolved, label, unit }: {
           </thead>
           <tbody>
             {result.terms.map((t, i) => (
-              <tr key={i}>
+              <tr key={i} className={sigClass(t.p)}>
                 <td className="mono">{t.term}</td>
                 <td className="mono">{t.df}</td>
                 <td className="mono">{sig(t.ss)}</td>
                 <td className="mono">{sig(t.ms)}</td>
                 <td className="mono">{t.f === null ? "-" : sig(t.f)}</td>
-                <td className="mono">{fmtP(t.p)}</td>
-                <td className="mono">{stars(t.p)}</td>
+                <td className="mono sig-pcell">{fmtP(t.p)}</td>
+                <td className="mono sig-stars">{stars(t.p)}</td>
               </tr>
             ))}
             <tr style={{ borderTop: "2px solid var(--panel-border-strong)" }}>
@@ -103,9 +112,8 @@ export function AnovaTable({ obs, depthResolved, label, unit }: {
         </table>
       </div>
 
-      <div className="muted" style={{ fontSize: "0.75rem", marginTop: 10, lineHeight: 1.6 }}>
-        Model: sequential Type I ANOVA with treatment contrasts. Block and all treatment factors are treated as <em>fixed</em>. For proper split-plot inference with block as a random effect (and correct error strata), switch to the <strong>Mixed effects</strong> sub-tab.
-        <br/>Sig. codes: <span className="mono">***</span> p&lt;0.001, <span className="mono">**</span> p&lt;0.01, <span className="mono">*</span> p&lt;0.05, <span className="mono">.</span> p&lt;0.1.
+      <div className="muted caption">
+        Sequential Type I ANOVA, treatment contrasts; block and treatment factors <em>fixed</em>. Switch to <strong>Mixed effects</strong> for block-as-random inference with correct error strata. Sig. codes: <span className="mono">***</span> p&lt;0.001, <span className="mono">**</span> p&lt;0.01, <span className="mono">*</span> p&lt;0.05, <span className="mono">.</span> p&lt;0.1.
       </div>
 
       {result.warnings.length > 0 && (

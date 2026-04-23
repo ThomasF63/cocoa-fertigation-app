@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { getAll, putOne } from "../db/repo";
+import { getAll, putOne, deleteOne } from "../db/repo";
 import type { StoreName } from "../db/schema";
 
 export interface UseStoreItems<T> {
@@ -8,6 +8,8 @@ export interface UseStoreItems<T> {
   reload: () => Promise<void>;
   saveItem: (item: T) => Promise<void>;
   replaceLocal: (item: T) => void;
+  removeLocal: (key: string) => void;
+  deleteItem: (key: string) => Promise<void>;
 }
 
 /** Load all items of a store into React state and expose a save function. */
@@ -43,7 +45,16 @@ export function useStoreItems<T>(
     replaceLocal(item);
   }, [store, replaceLocal]);
 
-  return { items, loading, reload, saveItem, replaceLocal };
+  const removeLocal = useCallback((key: string) => {
+    setItems(prev => prev.filter(p => String(p[keyField]) !== key));
+  }, [keyField]);
+
+  const deleteItem = useCallback(async (key: string) => {
+    await deleteOne(store, key);
+    removeLocal(key);
+  }, [store, removeLocal]);
+
+  return { items, loading, reload, saveItem, replaceLocal, removeLocal, deleteItem };
 }
 
 /** Debounced autosave wrapper. Returns a function with the same signature

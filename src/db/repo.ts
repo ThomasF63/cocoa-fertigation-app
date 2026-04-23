@@ -28,6 +28,12 @@ export async function putOne(store: StoreName, value: unknown): Promise<void> {
   await (db as any).put(store, value);
 }
 
+export async function deleteOne(store: StoreName, key: string): Promise<void> {
+  const db = await getDB();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (db as any).delete(store, key);
+}
+
 export async function bulkPut(store: StoreName, values: unknown[]): Promise<void> {
   if (!values.length) return;
   const db = await getDB();

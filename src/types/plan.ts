@@ -94,7 +94,10 @@ export const DEPTH_SCHEMES: DepthScheme[] = [
   },
 ];
 
-export const DEFAULT_DEPTH_SCHEME = DEPTH_SCHEMES.find(s => s.key === "4L_default")!;
+// Planning baseline: 2 layers (0-20, 20-40 cm) — retains Macedo (2025)'s
+// 0-20 cm topsoil interval and adds one extension below for SOC depth
+// attenuation. Other schemes remain selectable via the Sampling plan tab.
+export const DEFAULT_DEPTH_SCHEME = DEPTH_SCHEMES.find(s => s.key === "2L_0-20_20-40")!;
 
 // ── Plan type ─────────────────────────────────────────────────────────────────
 
@@ -104,11 +107,9 @@ export interface SamplingPlan {
   nBlocks: number;              // 1..8
   depths: DepthLayer[];         // layers for composite soil samples
   nSubsamplesPerPlot: number;   // subsamples composited into each plot×depth sample
-  nLeafTreesPerPlot: number;    // trees sampled per plot for leaf composite (1..treesPerPlot)
   treesPerPlot: number;         // 1..12
   nBdBlocks: number;            // number of blocks (first N) where BD is sampled; 0..nBlocks. One core per (geno × dose) plot per selected block.
   bdRingDepths: DepthLayer[];   // depths extracted at each BD point — one physical ring per depth
-  includeLeafComposites: boolean;
   includeNmin: boolean;
 }
 
@@ -122,11 +123,9 @@ export const DEFAULT_PLAN: SamplingPlan = {
   nBlocks: 8,
   depths: [...DEFAULT_DEPTH_SCHEME.layers],
   nSubsamplesPerPlot: 5,
-  nLeafTreesPerPlot: 5,
   treesPerPlot: 12,
   nBdBlocks: 2,
   bdRingDepths: [...DEFAULT_DEPTH_SCHEME.layers],
-  includeLeafComposites: true,
   includeNmin: true,
 };
 
@@ -139,9 +138,9 @@ export interface PlanCounts {
   soil_subsamples: number;    // field subsamples collected in total
   bd_points: number;          // BD sampling locations (plots where a BD column is extracted)
   bd_rings: number;           // physical Kopecky rings = points × depths
-  leaf_composites: number;
-  leaf_subsamples: number;    // total leaves collected across all plots
-  nmin_samples: number;
+  // N-min is a measurement performed on the 0–10 cm soil sample, not a
+  // distinct sample type. This counts planned measurements, one per plot.
+  nmin_measurements: number;
 }
 
 export function planCounts(plan: SamplingPlan): PlanCounts {
@@ -157,9 +156,7 @@ export function planCounts(plan: SamplingPlan): PlanCounts {
     soil_subsamples:  soil_samples * plan.nSubsamplesPerPlot,
     bd_points,
     bd_rings:         bd_points * plan.bdRingDepths.length,
-    leaf_composites:  plan.includeLeafComposites ? plots : 0,
-    leaf_subsamples:  plan.includeLeafComposites ? plots * plan.nLeafTreesPerPlot : 0,
-    nmin_samples:     plan.includeNmin ? plots : 0,
+    nmin_measurements: plan.includeNmin ? plots : 0,
   };
 }
 

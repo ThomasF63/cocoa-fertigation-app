@@ -9,6 +9,8 @@ import type { StoreName } from "../db/schema";
 import { VARIABLES, extractObservations, variableDef, type VariableKey, type Observation } from "../engine/variables";
 import { describe, groupBy, sig } from "../engine/statsEngine";
 import { fitAnova, fitSplitPlotAnova } from "../engine/anova";
+import { loadPlan } from "./planStorage";
+import { planCounts } from "../types/plan";
 
 const C = {
   soilHex:     [59, 50, 44]   as [number, number, number],
@@ -21,16 +23,18 @@ const C = {
   muted:       [120, 115, 108] as [number, number, number],
 };
 
-const TARGETS: Record<StoreName, number> = {
-  plots: 48, trees: 576, soil_samples: 192, bd_rings: 64, leaf_composites: 48,
-  nmin_samples: 48, tree_measurements: 576, soil_analytics: 192, leaf_analytics: 48,
-};
+function currentTargets(): Record<StoreName, number> {
+  const c = planCounts(loadPlan());
+  return {
+    plots: c.plots, trees: c.trees,
+    soil_samples: c.soil_samples, bd_rings: c.bd_rings,
+    tree_measurements: c.trees, soil_analytics: c.soil_samples,
+  };
+}
 const LABELS: Record<StoreName, string> = {
   plots: "Plots", trees: "Trees",
   soil_samples: "Soil samples", bd_rings: "BD rings",
-  leaf_composites: "Leaf composites", nmin_samples: "N-min samples",
   tree_measurements: "Tree measurements", soil_analytics: "Soil analytics",
-  leaf_analytics: "Leaf analytics",
 };
 
 function fmtP(p: number | null): string {
@@ -136,11 +140,12 @@ export async function generateReport(opts: ReportOptions = {}): Promise<Blob> {
   sectionTitle("1. Data collection status");
 
   const counts = await countsByStore();
+  const TARGETS = currentTargets();
   const rows = (Object.keys(TARGETS) as StoreName[]).map(s => [
     LABELS[s],
     String(counts[s] ?? 0),
     String(TARGETS[s]),
-    `${Math.round((100 * (counts[s] ?? 0)) / TARGETS[s])}%`,
+    TARGETS[s] === 0 ? "n/a" : `${Math.round((100 * (counts[s] ?? 0)) / TARGETS[s])}%`,
   ]);
   autoTable(doc, {
     startY: y,
@@ -159,10 +164,10 @@ export async function generateReport(opts: ReportOptions = {}): Promise<Blob> {
   ensureSpace(60);
   sectionTitle("2. Methods snippet");
   paragraph(
-    "This report summarises the cross-sectional (space-for-time) sampling campaign carried out on the ongoing Macedo (2025) N fertigation trial at MCCS, during a 3 to 4 day window in April 2026. The campaign comprises depth-resolved soil sampling (0 to 10, 10 to 20, 20 to 30, 30 to 50 cm), tree measurements on the 12 central trees of each plot (SPAD chlorophyll, stem diameter at 30 cm), and plot-level leaf composites. Post-visit laboratory analyses comprise SOC and TN by dry combustion, 56-day aerobic N mineralisation incubation, natural abundance delta 15N, pH and exchangeable bases, and leaf tissue N."
+    "This report summarises the cross-sectional (space-for-time) sampling campaign carried out on the ongoing Macedo (2025) N fertigation trial at MCCS, during a 3 to 4 day window in April 2026. The campaign comprises depth-resolved soil sampling (0 to 10, 10 to 20, 20 to 30, 30 to 50 cm) and tree size measurements on the 12 central trees of each plot (trunk diameters at 5, 30, 50 and 130 cm above the soil; total tree height; canopy width measured along and across the planting row). Post-visit laboratory analyses comprise SOC and TN by dry combustion, 56-day aerobic N mineralisation incubation, natural abundance delta 15N, and pH and exchangeable bases."
   );
   paragraph(
-    "Archived 2021 and 2022 soils from the original Macedo trial were no longer available at the time of this study. A retrospective reconstruction of SOC and TN stocks was therefore not possible, and the present analysis is based on a single cross-sectional campaign. Partial nitrogen mass balance and first-pass net global warming potential are computed in conjunction with the plant biomass, tissue N and fertigation records of Macedo (2025). Proper temporal stock-change inference is out of scope for this paper."
+    "Archived 2021 and 2022 soils from the original Macedo trial were no longer available at the time of this study. A retrospective reconstruction of SOC and TN stocks was therefore not possible, and the present analysis is based on a single cross-sectional campaign. Partial nitrogen mass balance and first-pass net global warming potential are computed in conjunction with the plant biomass and fertigation records of Macedo (2025). Proper temporal stock-change inference is out of scope for this paper."
   );
 
   // ---------- Analytical sections per variable ----------

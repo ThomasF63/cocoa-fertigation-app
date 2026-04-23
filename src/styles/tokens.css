@@ -45,23 +45,38 @@
   --warn:    var(--ek-seed);
   --danger:  var(--ek-terracotta);
 
+  /* ── CHROMATIC TEXT ON TINTED SURFACES ───────────────────────────────── */
+  /* Used by filter/treatment chips. Needs more chroma + darker L than the
+     plain --ek-*-dark tokens so small text stays readable on pale tints.
+     Paired with the dark-mode overrides below to keep contrast ≥ 6:1
+     across both themes. Light-mode values aim for ≥ 7:1 on each variant's
+     composited chip background. */
+  --chip-text-stem:  oklch(30% 0.095 145);
+  --chip-text-berry: oklch(26% 0.095 340);
+  --chip-text-seed:  oklch(32% 0.105  62);
+
   /* ── TYPOGRAPHY ──────────────────────────────────────────────────────── */
   --font-family: 'Archivo', system-ui, sans-serif;
   --font-mono:   'Azeret Mono', ui-monospace, Menlo, Consolas, monospace;
 
+  /* ── UI SCALE ────────────────────────────────────────────────────────── */
+  /* Applied by the header's zoom controls. Multiplies font-size and spacing
+     tokens so text, padding, and layout grow or shrink together. */
+  --ui-scale: 1;
+
   /* ── SPACING SCALE (4pt base) ────────────────────────────────────────── */
-  --space-1:  4px;
-  --space-2:  8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --space-7: 48px;
-  --space-8: 64px;
+  --space-1: calc( 4px * var(--ui-scale));
+  --space-2: calc( 8px * var(--ui-scale));
+  --space-3: calc(12px * var(--ui-scale));
+  --space-4: calc(16px * var(--ui-scale));
+  --space-5: calc(24px * var(--ui-scale));
+  --space-6: calc(32px * var(--ui-scale));
+  --space-7: calc(48px * var(--ui-scale));
+  --space-8: calc(64px * var(--ui-scale));
 
   /* ── LAYOUT ──────────────────────────────────────────────────────────── */
-  --sidebar-width:   320px;
-  --header-height:    52px;
+  --sidebar-width:  calc(380px * var(--ui-scale));
+  --header-height:  calc( 52px * var(--ui-scale));
   --radius-card:       8px;
   --radius-control:    5px;
   --shadow-tooltip:   0 6px 20px oklch(21% 0.018 50 / 0.18);
@@ -104,4 +119,11 @@
   --ek-soil-dark:   oklch(13% 0.012 50);
 
   --shadow-tooltip: 0 6px 20px oklch(0% 0 0 / 0.55);
+
+  /* Invert chip text lightness for dark-mode tinted backgrounds. Chroma is
+     reduced here because high chroma at extreme lightness reads as garish
+     (per palette principle: reduce chroma as L approaches the extremes). */
+  --chip-text-stem:  oklch(92% 0.075 145);
+  --chip-text-berry: oklch(92% 0.060 340);
+  --chip-text-seed:  oklch(93% 0.090  72);
 }

@@ -5,9 +5,9 @@ import { parseCsv, toCsv, numOrUndef, strOrUndef } from "../utils/csvParse";
 import { bulkPut } from "./repo";
 import type { StoreName } from "./schema";
 import type { Plot, Tree } from "../types/design";
-import type { SoilSample, BDRing, LeafComposite, NminSample } from "../types/samples";
+import type { SoilSample, BDRing } from "../types/samples";
 import type { TreeMeasurement } from "../types/measurements";
-import type { SoilAnalytics, LeafAnalytics } from "../types/analytics";
+import type { SoilAnalytics } from "../types/analytics";
 
 // ----- Header definitions (exact order matches data/ templates) -----
 
@@ -20,7 +20,7 @@ export const HEADERS: Record<StoreName | "soil_stocks" | "plot_summary", string[
   trees: ["tree_id","plot_id","tree_number_in_plot","tag_id","tagged_date","notes"],
   soil_samples: [
     "sample_id","plot_id","depth_label","depth_top_cm","depth_bottom_cm",
-    "n_subsamples","compositing_pattern",
+    "n_subsamples","compositing_pattern","coarse_fragments_pct",
     "sampling_date","sampler","moisture_visual","notes",
   ],
   bd_rings: [
@@ -30,13 +30,10 @@ export const HEADERS: Record<StoreName | "soil_stocks" | "plot_summary", string[
   ],
   tree_measurements: [
     "tree_id","plot_id","measurement_date",
-    "spad_leaf_1","spad_leaf_2","spad_leaf_3","spad_mean",
-    "stem_diameter_30cm_mm","pod_load_score","vigour_score",
-    "observer","notes",
-  ],
-  leaf_composites: [
-    "sample_id","plot_id","sampling_date",
-    "n_trees_sampled","n_leaves_combined","fresh_weight_g","dry_weight_g",
+    "stem_diameter_5cm_mm","stem_diameter_30cm_mm",
+    "stem_diameter_50cm_mm","stem_diameter_130cm_mm",
+    "tree_height_m",
+    "canopy_width_along_row_m","canopy_width_across_row_m","canopy_width_mean_m",
     "observer","notes",
   ],
   soil_analytics: [
@@ -44,27 +41,24 @@ export const HEADERS: Record<StoreName | "soil_stocks" | "plot_summary", string[
     "soc_g_kg","tn_g_kg","c_n_ratio","ph_h2o",
     "ca_mmolc_dm3","mg_mmolc_dm3","k_mmolc_dm3",
     "al3_mmolc_dm3","h_al_mmolc_dm3","base_saturation_pct",
-    "delta15n_per_mil","notes",
-  ],
-  nmin_samples: [
-    "sample_id","plot_id","lab","incubation_start_date","incubation_end_date",
-    "day0_nh4_mg_kg","day0_no3_mg_kg","day56_nh4_mg_kg","day56_no3_mg_kg",
-    "net_min_rate_mg_kg_d","notes",
-  ],
-  leaf_analytics: [
-    "sample_id","plot_id","lab","analysis_date",
-    "n_concentration_pct","delta15n_per_mil","notes",
+    "incubation_lab","incubation_start_date","incubation_end_date",
+    "day0_nh4_mg_kg","day0_no3_mg_kg",
+    "day56_nh4_mg_kg","day56_no3_mg_kg",
+    "net_min_rate_mg_kg_d",
+    "notes",
   ],
   soil_stocks: [
     "plot_id","depth_label","depth_top_cm","depth_bottom_cm","layer_thickness_cm",
-    "bulk_density_g_cm3","soc_g_kg","tn_g_kg",
-    "soc_stock_mg_ha","tn_stock_kg_ha","notes",
+    "bulk_density_g_cm3","coarse_fragments_pct","soc_g_kg","tn_g_kg",
+    "soc_stock_fd_mg_ha","tn_stock_fd_kg_ha",
+    "soc_stock_esm_mg_ha","tn_stock_esm_kg_ha",
+    "notes",
   ],
   plot_summary: [
     "plot_id","block","genotype","n_dose_kg_ha_yr",
-    "soc_stock_0_50_mg_ha","tn_stock_0_50_kg_ha",
-    "mean_spad","mean_stem_diameter_mm",
-    "leaf_n_pct","leaf_delta15n_per_mil",
+    "soc_stock_fd_0_40_mg_ha","tn_stock_fd_0_40_kg_ha",
+    "soc_stock_esm_0_40_mg_ha","tn_stock_esm_0_40_kg_ha",
+    "mean_stem_diameter_30cm_mm","mean_tree_height_m","mean_canopy_width_m",
     "net_min_rate_mg_kg_d","notes",
   ],
 };
@@ -76,10 +70,7 @@ export const FILENAME_TO_STORE: Record<string, StoreName> = {
   "soil_samples.csv":          "soil_samples",
   "bulk_density_rings.csv":    "bd_rings",
   "tree_measurements.csv":     "tree_measurements",
-  "leaf_tissue_composites.csv":"leaf_composites",
   "soil_analytics.csv":        "soil_analytics",
-  "n_mineralisation.csv":      "nmin_samples",
-  "leaf_tissue_analytics.csv": "leaf_analytics",
 };
 
 // ----- Row coercion per store -----
@@ -127,6 +118,7 @@ function rowToSoilSample(r: Record<string, string>): SoilSample {
     depth_bottom_cm: Number(r.depth_bottom_cm),
     n_subsamples: numOrUndef(r.n_subsamples),
     compositing_pattern: strOrUndef(r.compositing_pattern),
+    coarse_fragments_pct: numOrUndef(r.coarse_fragments_pct),
     sampling_date: strOrUndef(r.sampling_date),
     sampler: strOrUndef(r.sampler),
     moisture_visual: strOrUndef(r.moisture_visual),
@@ -156,27 +148,14 @@ function rowToTreeMeasurement(r: Record<string, string>): TreeMeasurement {
     tree_id: r.tree_id,
     plot_id: r.plot_id,
     measurement_date: strOrUndef(r.measurement_date),
-    spad_leaf_1: numOrUndef(r.spad_leaf_1),
-    spad_leaf_2: numOrUndef(r.spad_leaf_2),
-    spad_leaf_3: numOrUndef(r.spad_leaf_3),
-    spad_mean: numOrUndef(r.spad_mean),
+    stem_diameter_5cm_mm: numOrUndef(r.stem_diameter_5cm_mm),
     stem_diameter_30cm_mm: numOrUndef(r.stem_diameter_30cm_mm),
-    pod_load_score: numOrUndef(r.pod_load_score),
-    vigour_score: numOrUndef(r.vigour_score),
-    observer: strOrUndef(r.observer),
-    notes: strOrUndef(r.notes),
-  };
-}
-
-function rowToLeafComposite(r: Record<string, string>): LeafComposite {
-  return {
-    sample_id: r.sample_id,
-    plot_id: r.plot_id,
-    sampling_date: strOrUndef(r.sampling_date),
-    n_trees_sampled: numOrUndef(r.n_trees_sampled),
-    n_leaves_combined: numOrUndef(r.n_leaves_combined),
-    fresh_weight_g: numOrUndef(r.fresh_weight_g),
-    dry_weight_g: numOrUndef(r.dry_weight_g),
+    stem_diameter_50cm_mm: numOrUndef(r.stem_diameter_50cm_mm),
+    stem_diameter_130cm_mm: numOrUndef(r.stem_diameter_130cm_mm),
+    tree_height_m: numOrUndef(r.tree_height_m),
+    canopy_width_along_row_m: numOrUndef(r.canopy_width_along_row_m),
+    canopy_width_across_row_m: numOrUndef(r.canopy_width_across_row_m),
+    canopy_width_mean_m: numOrUndef(r.canopy_width_mean_m),
     observer: strOrUndef(r.observer),
     notes: strOrUndef(r.notes),
   };
@@ -199,16 +178,7 @@ function rowToSoilAnalytics(r: Record<string, string>): SoilAnalytics {
     al3_mmolc_dm3: numOrUndef(r.al3_mmolc_dm3),
     h_al_mmolc_dm3: numOrUndef(r.h_al_mmolc_dm3),
     base_saturation_pct: numOrUndef(r.base_saturation_pct),
-    delta15n_per_mil: numOrUndef(r.delta15n_per_mil),
-    notes: strOrUndef(r.notes),
-  };
-}
-
-function rowToNmin(r: Record<string, string>): NminSample {
-  return {
-    sample_id: r.sample_id,
-    plot_id: r.plot_id,
-    lab: strOrUndef(r.lab),
+    incubation_lab: strOrUndef(r.incubation_lab),
     incubation_start_date: strOrUndef(r.incubation_start_date),
     incubation_end_date: strOrUndef(r.incubation_end_date),
     day0_nh4_mg_kg: numOrUndef(r.day0_nh4_mg_kg),
@@ -220,18 +190,6 @@ function rowToNmin(r: Record<string, string>): NminSample {
   };
 }
 
-function rowToLeafAnalytics(r: Record<string, string>): LeafAnalytics {
-  return {
-    sample_id: r.sample_id,
-    plot_id: r.plot_id,
-    lab: strOrUndef(r.lab),
-    analysis_date: strOrUndef(r.analysis_date),
-    n_concentration_pct: numOrUndef(r.n_concentration_pct),
-    delta15n_per_mil: numOrUndef(r.delta15n_per_mil),
-    notes: strOrUndef(r.notes),
-  };
-}
-
 type Coercer = (r: Record<string, string>) => unknown;
 const COERCERS: Record<StoreName, Coercer> = {
   plots: rowToPlot,
@@ -239,10 +197,7 @@ const COERCERS: Record<StoreName, Coercer> = {
   soil_samples: rowToSoilSample,
   bd_rings: rowToBDRing,
   tree_measurements: rowToTreeMeasurement,
-  leaf_composites: rowToLeafComposite,
   soil_analytics: rowToSoilAnalytics,
-  nmin_samples: rowToNmin,
-  leaf_analytics: rowToLeafAnalytics,
 };
 
 // ----- Import -----

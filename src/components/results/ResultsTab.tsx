@@ -33,10 +33,14 @@ export function ResultsTab() {
 
   const def = variableDef(variable);
   const depthResolved = def.level === "depth";
+  const plotCount = new Set(obs.map(o => o.plot_id)).size;
 
   return (
-    <div className="column" style={{ gap: 10 }}>
-      <nav className="entry-nav" aria-label="Results sections">
+    <div className="results-tab">
+      <VariablePicker value={variable} onChange={setVariable} />
+
+      <div className="results-subnav-row">
+        <nav className="entry-nav compact" aria-label="Results sections">
         {SUBS.map(s => (
           <button
             key={s.key}
@@ -49,55 +53,43 @@ export function ResultsTab() {
             {s.label}
           </button>
         ))}
-      </nav>
-
-      <div className="card">
-        <VariablePicker value={variable} onChange={setVariable} />
-        <div className="row muted mono" style={{ marginTop: 8, fontSize: "0.78rem" }}>
-          {loading ? "Loading..." : `${obs.length} observations across ${new Set(obs.map(o => o.plot_id)).size} plot(s)`}
+        </nav>
+        <div className="results-meta mono">
+          {loading ? "Loading…" : `${obs.length} obs · ${plotCount} plot${plotCount === 1 ? "" : "s"}`}
         </div>
       </div>
 
-      {sub === "descriptive" && (
-        <div className="card">
-          <h2 className="card-title">Treatment descriptives</h2>
+      <div className="card results-content">
+        {sub === "descriptive" && (
           <DescriptiveTable obs={obs} includeDepth={depthResolved} unit={def.unit} />
-        </div>
-      )}
+        )}
 
-      {sub === "dose" && (
-        <div className="card">
-          <h2 className="card-title">Dose response</h2>
-          <DoseResponseChart obs={obs} unit={def.unit} label={def.label} />
-          <div className="muted" style={{ fontSize: "0.78rem", marginTop: 8 }}>
-            Means +- SE across plots. Faint grey points: individual plot observations. For depth-resolved variables, values are averaged across depths.
-          </div>
-        </div>
-      )}
+        {sub === "dose" && (
+          <>
+            <DoseResponseChart obs={obs} unit={def.unit} label={def.label} />
+            <div className="muted caption">
+              Means ± SE across plots. Individual plots shown as translucent points coloured by genotype; use the selector above the chart to switch between stacked, jittered, and beeswarm layouts. For depth-resolved variables, means are across depths.
+            </div>
+          </>
+        )}
 
-      {sub === "depth" && (
-        <div className="card">
-          <h2 className="card-title">Depth profile</h2>
-          <DepthProfileChart obs={obs} unit={def.unit} label={def.label} />
-          <div className="muted" style={{ fontSize: "0.78rem", marginTop: 8 }}>
-            Means +- SE. Line style encodes genotype (solid = CCN 51, dashed = PS 13.19). Colour encodes N dose.
-          </div>
-        </div>
-      )}
+        {sub === "depth" && (
+          <>
+            <DepthProfileChart obs={obs} unit={def.unit} label={def.label} />
+            <div className="muted caption">
+              Means ± SE, plotted at horizon mid-depth. Horizontal error bars are ± 1 SE. Shaded strips mark the sampled depth intervals; hover a legend chip to isolate a dose or genotype.
+            </div>
+          </>
+        )}
 
-      {sub === "inference" && (
-        <div className="card">
-          <h2 className="card-title">Fixed-effects ANOVA</h2>
+        {sub === "inference" && (
           <AnovaTable obs={obs} depthResolved={depthResolved} label={def.label} unit={def.unit} />
-        </div>
-      )}
+        )}
 
-      {sub === "mixed" && (
-        <div className="card">
-          <h2 className="card-title">Mixed-effects split-plot ANOVA</h2>
+        {sub === "mixed" && (
           <MixedEffectsPanel obs={obs} depthResolved={depthResolved} label={def.label} unit={def.unit} />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

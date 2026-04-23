@@ -1,4 +1,4 @@
-import { Menu, Sun, Moon, Contrast } from "lucide-react";
+import { Menu, Sun, Moon, Contrast, ZoomIn, ZoomOut } from "lucide-react";
 import type { Theme } from "../../App";
 
 interface Props {
@@ -6,6 +6,12 @@ interface Props {
   onCycleTheme: () => void;
   theme: Theme;
   pendingChanges: number;
+  uiScale: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onZoomReset: () => void;
+  zoomInDisabled: boolean;
+  zoomOutDisabled: boolean;
 }
 
 const THEME_META: Record<Theme, { icon: typeof Sun; label: string; next: Theme }> = {
@@ -14,9 +20,13 @@ const THEME_META: Record<Theme, { icon: typeof Sun; label: string; next: Theme }
   contrast: { icon: Contrast, label: "High contrast", next: "light" },
 };
 
-export function AppHeader({ onToggleSidebar, onCycleTheme, theme, pendingChanges }: Props) {
+export function AppHeader({
+  onToggleSidebar, onCycleTheme, theme, pendingChanges,
+  uiScale, onZoomIn, onZoomOut, onZoomReset, zoomInDisabled, zoomOutDisabled,
+}: Props) {
   const meta = THEME_META[theme];
   const Icon = meta.icon;
+  const scalePct = Math.round(uiScale * 100);
   return (
     <header className="header">
       <button className="sidebar-toggle-btn" aria-label="Toggle sidebar" onClick={onToggleSidebar}>
@@ -30,6 +40,34 @@ export function AppHeader({ onToggleSidebar, onCycleTheme, theme, pendingChanges
           {pendingChanges} pending
         </span>
       )}
+      <div className="zoom-group" role="group" aria-label="UI scale">
+        <button
+          className="sidebar-toggle-btn"
+          aria-label="Decrease UI scale"
+          title="Decrease UI scale"
+          onClick={onZoomOut}
+          disabled={zoomOutDisabled}
+        >
+          <ZoomOut size={18} />
+        </button>
+        <button
+          className="sidebar-toggle-btn zoom-readout mono"
+          aria-label={`UI scale ${scalePct}%. Click to reset.`}
+          title="Reset UI scale"
+          onClick={onZoomReset}
+        >
+          {scalePct}%
+        </button>
+        <button
+          className="sidebar-toggle-btn"
+          aria-label="Increase UI scale"
+          title="Increase UI scale"
+          onClick={onZoomIn}
+          disabled={zoomInDisabled}
+        >
+          <ZoomIn size={18} />
+        </button>
+      </div>
       <button
         className="sidebar-toggle-btn"
         aria-label={`Theme: ${meta.label}. Click for ${THEME_META[meta.next].label}.`}

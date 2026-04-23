@@ -2,47 +2,77 @@
 
 import { getAll } from "../db/repo";
 import type { Plot } from "../types/design";
-import type { BDRing, LeafComposite, NminSample } from "../types/samples";
+import type { SoilSample, BDRing } from "../types/samples";
 import type { TreeMeasurement } from "../types/measurements";
-import type { SoilAnalytics, LeafAnalytics } from "../types/analytics";
+import type { SoilAnalytics } from "../types/analytics";
+import { computeSoilStocks } from "./derived";
 
 export type VariableKey =
-  | "spad_mean"
+  | "stem_diameter_5cm_mm"
   | "stem_diameter_30cm_mm"
+  | "stem_diameter_50cm_mm"
+  | "stem_diameter_130cm_mm"
+  | "tree_height_m"
+  | "canopy_width_mean_m"
   | "soc_g_kg"
   | "tn_g_kg"
   | "ph_h2o"
   | "bulk_density_g_cm3"
-  | "soil_delta15n"
-  | "leaf_n_pct"
-  | "leaf_delta15n"
-  | "net_min_rate_mg_kg_d"
-  | "leaf_fresh_weight_g"
-  | "leaf_dry_weight_g";
+  | "coarse_fragments_pct"
+  | "soc_stock_fd_mg_ha"
+  | "soc_stock_esm_mg_ha"
+  | "tn_stock_fd_kg_ha"
+  | "tn_stock_esm_kg_ha"
+  | "net_min_rate_mg_kg_d";
 
 export type VariableLevel = "plot" | "depth";
+
+export type VariableCategory =
+  | "tree_growth"
+  | "soil_chemistry"
+  | "soil_physical"
+  | "soil_stocks"
+  | "n_mineralisation";
+
+export interface VariableCategoryDef {
+  key: VariableCategory;
+  label: string;
+}
+
+export const VARIABLE_CATEGORIES: VariableCategoryDef[] = [
+  { key: "tree_growth",      label: "Tree growth" },
+  { key: "soil_chemistry",   label: "Soil chemistry" },
+  { key: "soil_physical",    label: "Soil physical" },
+  { key: "soil_stocks",      label: "Soil stocks" },
+  { key: "n_mineralisation", label: "N mineralisation" },
+];
 
 export interface VariableDef {
   key: VariableKey;
   label: string;
   unit: string;
   level: VariableLevel;          // observation unit
+  category: VariableCategory;
   higherIsBetter?: boolean;       // for chart cue only
 }
 
 export const VARIABLES: VariableDef[] = [
-  { key: "spad_mean",            label: "SPAD (plot mean)",        unit: "",               level: "plot" },
-  { key: "stem_diameter_30cm_mm",label: "Stem diameter @ 30 cm",   unit: "mm",             level: "plot" },
-  { key: "soc_g_kg",             label: "SOC",                     unit: "g kg\u207B\u00B9",level: "depth" },
-  { key: "tn_g_kg",              label: "Total N",                 unit: "g kg\u207B\u00B9",level: "depth" },
-  { key: "ph_h2o",               label: "pH (H\u2082O)",           unit: "",               level: "depth" },
-  { key: "bulk_density_g_cm3",   label: "Bulk density",            unit: "g cm\u207B\u00B3",level: "depth" },
-  { key: "soil_delta15n",        label: "Soil \u03B4\u00B9\u2075N",unit: "\u2030",         level: "depth" },
-  { key: "leaf_n_pct",           label: "Leaf N",                  unit: "%",              level: "plot" },
-  { key: "leaf_delta15n",        label: "Leaf \u03B4\u00B9\u2075N",unit: "\u2030",         level: "plot" },
-  { key: "net_min_rate_mg_kg_d", label: "Net N mineralisation",    unit: "mg kg\u207B\u00B9 d\u207B\u00B9", level: "plot" },
-  { key: "leaf_fresh_weight_g",  label: "Leaf fresh weight",       unit: "g",              level: "plot" },
-  { key: "leaf_dry_weight_g",    label: "Leaf dry weight",         unit: "g",              level: "plot" },
+  { key: "stem_diameter_5cm_mm",  label: "Stem diameter @ 5 cm",    unit: "mm",             level: "plot",  category: "tree_growth" },
+  { key: "stem_diameter_30cm_mm", label: "Stem diameter @ 30 cm",   unit: "mm",             level: "plot",  category: "tree_growth" },
+  { key: "stem_diameter_50cm_mm", label: "Stem diameter @ 50 cm",   unit: "mm",             level: "plot",  category: "tree_growth" },
+  { key: "stem_diameter_130cm_mm",label: "Stem diameter @ 130 cm (DBH)", unit: "mm",        level: "plot",  category: "tree_growth" },
+  { key: "tree_height_m",         label: "Tree height",             unit: "m",              level: "plot",  category: "tree_growth" },
+  { key: "canopy_width_mean_m",   label: "Canopy width (mean)",     unit: "m",              level: "plot",  category: "tree_growth" },
+  { key: "soc_g_kg",             label: "SOC",                     unit: "g kg\u207B\u00B9",level: "depth", category: "soil_chemistry" },
+  { key: "tn_g_kg",              label: "Total N",                 unit: "g kg\u207B\u00B9",level: "depth", category: "soil_chemistry" },
+  { key: "ph_h2o",               label: "pH (H\u2082O)",           unit: "",               level: "depth", category: "soil_chemistry" },
+  { key: "bulk_density_g_cm3",   label: "Bulk density",            unit: "g cm\u207B\u00B3",level: "depth", category: "soil_physical" },
+  { key: "coarse_fragments_pct", label: "Coarse fragments (>2 mm)",unit: "% mass",         level: "depth", category: "soil_physical" },
+  { key: "soc_stock_fd_mg_ha",   label: "SOC stock (fixed-depth)", unit: "Mg ha\u207B\u00B9",level: "depth", category: "soil_stocks" },
+  { key: "soc_stock_esm_mg_ha",  label: "SOC stock (ESM)",         unit: "Mg ha\u207B\u00B9",level: "depth", category: "soil_stocks" },
+  { key: "tn_stock_fd_kg_ha",    label: "TN stock (fixed-depth)",  unit: "kg ha\u207B\u00B9",level: "depth", category: "soil_stocks" },
+  { key: "tn_stock_esm_kg_ha",   label: "TN stock (ESM)",          unit: "kg ha\u207B\u00B9",level: "depth", category: "soil_stocks" },
+  { key: "net_min_rate_mg_kg_d", label: "Net N mineralisation",    unit: "mg kg\u207B\u00B9 d\u207B\u00B9", level: "plot", category: "n_mineralisation" },
 ];
 
 export interface Observation {
@@ -85,8 +115,12 @@ export async function extractObservations(key: VariableKey): Promise<Observation
   const out: Observation[] = [];
 
   switch (key) {
-    case "spad_mean":
-    case "stem_diameter_30cm_mm": {
+    case "stem_diameter_5cm_mm":
+    case "stem_diameter_30cm_mm":
+    case "stem_diameter_50cm_mm":
+    case "stem_diameter_130cm_mm":
+    case "tree_height_m":
+    case "canopy_width_mean_m": {
       const meas = await getAll<TreeMeasurement>("tree_measurements");
       // Aggregate tree to plot-level mean
       const byPlot = new Map<string, number[]>();
@@ -115,11 +149,6 @@ export async function extractObservations(key: VariableKey): Promise<Observation
       }
       break;
     }
-    case "soil_delta15n": {
-      const rows = await getAll<SoilAnalytics>("soil_analytics");
-      for (const r of rows) addObs(out, idx[r.plot_id], r.delta15n_per_mil, { depth_label: r.depth_label });
-      break;
-    }
     case "bulk_density_g_cm3": {
       const rings = await getAll<BDRing>("bd_rings");
       for (const r of rings) {
@@ -128,27 +157,33 @@ export async function extractObservations(key: VariableKey): Promise<Observation
       }
       break;
     }
-    case "leaf_n_pct": {
-      const rows = await getAll<LeafAnalytics>("leaf_analytics");
-      for (const r of rows) addObs(out, idx[r.plot_id], r.n_concentration_pct);
+    case "coarse_fragments_pct": {
+      const rows = await getAll<SoilSample>("soil_samples");
+      for (const r of rows) addObs(out, idx[r.plot_id], r.coarse_fragments_pct, { depth_label: r.depth_label });
       break;
     }
-    case "leaf_delta15n": {
-      const rows = await getAll<LeafAnalytics>("leaf_analytics");
-      for (const r of rows) addObs(out, idx[r.plot_id], r.delta15n_per_mil);
+    case "soc_stock_fd_mg_ha":
+    case "soc_stock_esm_mg_ha":
+    case "tn_stock_fd_kg_ha":
+    case "tn_stock_esm_kg_ha": {
+      // Derived stocks: computed on-the-fly from soil_samples + bd_rings + soil_analytics.
+      const stocks = await computeSoilStocks();
+      for (const s of stocks) {
+        const v = (s as unknown as Record<string, unknown>)[key] as number | undefined;
+        addObs(out, idx[s.plot_id], v, { depth_label: s.depth_label });
+      }
       break;
     }
     case "net_min_rate_mg_kg_d": {
-      const rows = await getAll<NminSample>("nmin_samples");
-      for (const r of rows) addObs(out, idx[r.plot_id], r.net_min_rate_mg_kg_d);
-      break;
-    }
-    case "leaf_fresh_weight_g":
-    case "leaf_dry_weight_g": {
-      const rows = await getAll<LeafComposite>("leaf_composites");
+      // N-min is an incubation-based measurement on an existing soil sample
+      // (typically the 0–10 cm horizon). It lives as columns on the
+      // soil_analytics row for that plot × depth, so extract it from there
+      // wherever the rate column is populated — the sampling plan decides
+      // which depth the lab actually ran it on.
+      const rows = await getAll<SoilAnalytics>("soil_analytics");
       for (const r of rows) {
-        const v = (r as unknown as Record<string, unknown>)[key] as number | undefined;
-        addObs(out, idx[r.plot_id], v);
+        if (r.net_min_rate_mg_kg_d == null) continue;
+        addObs(out, idx[r.plot_id], r.net_min_rate_mg_kg_d);
       }
       break;
     }

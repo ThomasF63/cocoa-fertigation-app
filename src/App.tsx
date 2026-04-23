@@ -15,16 +15,33 @@ export type Theme = "light" | "dark" | "contrast";
 const THEME_ORDER: Theme[] = ["light", "dark", "contrast"];
 const THEME_KEY = "mccs.theme";
 
+const SCALE_KEY = "mccs.uiScale";
+const SCALE_MIN = 0.8;
+const SCALE_MAX = 1.4;
+const SCALE_STEP = 0.1;
+const SCALE_DEFAULT = 1;
+
 function loadTheme(): Theme {
   const stored = localStorage.getItem(THEME_KEY);
   if (stored === "light" || stored === "dark" || stored === "contrast") return stored;
   return "light";
 }
 
+function loadScale(): number {
+  const stored = Number(localStorage.getItem(SCALE_KEY));
+  if (!Number.isFinite(stored) || stored < SCALE_MIN || stored > SCALE_MAX) return SCALE_DEFAULT;
+  return stored;
+}
+
+function clampScale(s: number): number {
+  return Math.min(SCALE_MAX, Math.max(SCALE_MIN, Math.round(s * 10) / 10));
+}
+
 export default function App() {
   const [tab, setTab] = useState<TabKey>("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState<Theme>(loadTheme);
+  const [uiScale, setUiScale] = useState<number>(loadScale);
   const [pendingChanges, setPendingChanges] = useState(0);
   const [lastSync, setLastSync] = useState<string | null>(null);
 
@@ -33,9 +50,18 @@ export default function App() {
     localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
 
+  useEffect(() => {
+    document.documentElement.style.setProperty("--ui-scale", String(uiScale));
+    localStorage.setItem(SCALE_KEY, String(uiScale));
+  }, [uiScale]);
+
   const cycleTheme = () => {
     setTheme(t => THEME_ORDER[(THEME_ORDER.indexOf(t) + 1) % THEME_ORDER.length]);
   };
+
+  const zoomIn  = () => setUiScale(s => clampScale(s + SCALE_STEP));
+  const zoomOut = () => setUiScale(s => clampScale(s - SCALE_STEP));
+  const zoomReset = () => setUiScale(SCALE_DEFAULT);
 
   const panel = useMemo(() => {
     switch (tab) {
@@ -56,6 +82,12 @@ export default function App() {
         onCycleTheme={cycleTheme}
         theme={theme}
         pendingChanges={pendingChanges}
+        uiScale={uiScale}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        onZoomReset={zoomReset}
+        zoomInDisabled={uiScale >= SCALE_MAX - 1e-9}
+        zoomOutDisabled={uiScale <= SCALE_MIN + 1e-9}
       />
       <div className="app-body">
         <Sidebar collapsed={sidebarCollapsed} pendingChanges={pendingChanges} lastSync={lastSync} />

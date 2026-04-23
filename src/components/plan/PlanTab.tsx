@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { RotateCcw, AlertTriangle, Info } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AlertTriangle, Info } from "lucide-react";
 import {
-  DOSE_N_KG_HA_YR,
-  GENOTYPE_LABELS,
-  type DepthLayer,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  ReferenceLine, ReferenceArea,
+} from "recharts";
+import {
   type DoseCode,
   type GenotypeCode,
 } from "../../types/design";
@@ -11,215 +12,45 @@ import {
   ALL_GENOTYPES,
   ALL_DOSES,
   ALL_BLOCKS,
-  DEFAULT_PLAN,
-  DEPTH_SCHEMES,
-  maxBdBlocks,
   planCounts,
   validatePlan,
-  type DepthScheme,
   type SamplingPlan,
 } from "../../types/plan";
-import { loadPlan, savePlan, resetPlan } from "../../utils/planStorage";
-import { GENOTYPE_FILL, GENOTYPE_STROKE, TOKENS } from "../../utils/palette";
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function toggle<T>(arr: T[], item: T): T[] {
-  return arr.includes(item) ? arr.filter(x => x !== item) : [...arr, item];
-}
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{
-      fontFamily: "var(--font-mono)", fontSize: "0.65rem",
-      letterSpacing: "0.08em", textTransform: "uppercase",
-      color: "var(--text-secondary)", marginBottom: 8,
-    }}>
-      {children}
-    </div>
-  );
-}
-
-function CheckChip({
-  label, checked, onChange, color,
-}: {
-  label: string; checked: boolean; onChange: () => void; color?: string;
-}) {
-  const c = color ?? "var(--ek-soil)";
-  return (
-    <label style={{
-      display: "inline-flex", alignItems: "center", gap: 6,
-      padding: "4px 10px", borderRadius: 999,
-      border: `1px solid ${checked ? c : "var(--panel-border-strong)"}`,
-      background: checked ? `color-mix(in srgb, ${c} 12%, transparent)` : "var(--panel-bg)",
-      cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: "0.72rem",
-      letterSpacing: "0.05em", userSelect: "none",
-      transition: "background 0.12s, border-color 0.12s",
-      color: checked ? c : "var(--text-secondary)",
-    }}>
-      <input type="checkbox" checked={checked} onChange={onChange}
-        style={{ width: 13, height: 13, accentColor: c }} />
-      {label}
-    </label>
-  );
-}
-
-// ── Depth profile diagram ─────────────────────────────────────────────────────
-// Vertical soil column, layers as coloured bands.
-
-const DEPTH_COLORS = [
-  "var(--ek-depth-1)", // D1 – lightest (surface)
-  "var(--ek-depth-2)",
-  "var(--ek-depth-3)",
-  "var(--ek-depth-4)", // D4 – darkest (deep)
-];
-
-function DepthProfileDiagram({ layers }: { layers: DepthLayer[] }) {
-  if (layers.length === 0) {
-    return <div className="muted" style={{ fontSize: "0.78rem" }}>No layers selected.</div>;
-  }
-  const maxDepth = Math.max(...layers.map(l => l.bottom));
-  const W = 56, H = 160, labelX = W + 8;
-  const toY = (cm: number) => (cm / maxDepth) * H;
-
-  return (
-    <svg width={labelX + 80} height={H + 28} style={{ display: "block", overflow: "visible" }}>
-      {/* axis labels */}
-      <text x={W - 4} y={8} textAnchor="end" fontFamily="var(--font-mono)"
-        fontSize="9" fill="var(--text-muted)">0</text>
-      <text x={W - 4} y={H + 11} textAnchor="end" fontFamily="var(--font-mono)"
-        fontSize="9" fill="var(--text-muted)">{maxDepth}</text>
-      <text x={W - 4} y={H + 21} textAnchor="end" fontFamily="var(--font-mono)"
-        fontSize="8" fill="var(--text-muted)">cm</text>
-
-      {/* outer border */}
-      <rect x={0} y={0} width={W} height={H} fill="none"
-        stroke="var(--panel-border-strong)" strokeWidth={1} rx={3} />
-
-      {layers.map((l, i) => {
-        const y0 = toY(l.top);
-        const y1 = toY(l.bottom);
-        const mid = (y0 + y1) / 2;
-        const fill = DEPTH_COLORS[i % DEPTH_COLORS.length];
-        return (
-          <g key={l.code}>
-            <rect x={0} y={y0} width={W} height={y1 - y0} fill={fill}
-              stroke="var(--panel-bg)" strokeWidth={1} />
-            {/* code label inside bar */}
-            <text x={W / 2} y={mid + 4} textAnchor="middle"
-              fontFamily="var(--font-mono)" fontSize="9" fontWeight="700"
-              fill="var(--ek-root)" fillOpacity={0.85} pointerEvents="none">
-              {l.code}
-            </text>
-            {/* range label to the right */}
-            <text x={labelX} y={y0 + 10} fontFamily="var(--font-mono)"
-              fontSize="9" fill="var(--text-secondary)">
-              {l.top}–{l.bottom} cm
-            </text>
-            {/* divider tick */}
-            {i > 0 && (
-              <line x1={-4} y1={y0} x2={W} y2={y0}
-                stroke="var(--panel-bg)" strokeWidth={1} />
-            )}
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
-// ── Depth scheme picker ───────────────────────────────────────────────────────
-
-function DepthSchemePicker({
-  value, onChange,
-}: {
-  value: DepthLayer[];
-  onChange: (layers: DepthLayer[]) => void;
-}) {
-  const matchedScheme = DEPTH_SCHEMES.find(s =>
-    s.layers.length === value.length &&
-    s.layers.every((l, i) => l.top === value[i]?.top && l.bottom === value[i]?.bottom)
-  );
-  const [nLayers, setNLayers] = useState<1 | 2 | 3 | 4>(
-    (matchedScheme?.nLayers ?? (value.length as 1 | 2 | 3 | 4)) || 4
-  );
-
-  const schemesForCount = DEPTH_SCHEMES.filter(s => s.nLayers === nLayers);
-
-  function selectCount(n: 1 | 2 | 3 | 4) {
-    setNLayers(n);
-    const first = DEPTH_SCHEMES.find(s => s.nLayers === n);
-    if (first) onChange(first.layers);
-  }
-
-  function selectScheme(s: DepthScheme) {
-    onChange(s.layers);
-  }
-
-  const countBtns: (1 | 2 | 3 | 4)[] = [1, 2, 3, 4];
-
-  return (
-    <div className="column" style={{ gap: 10 }}>
-      {/* Layer count selector */}
-      <div className="row" style={{ gap: 6 }}>
-        {countBtns.map(n => (
-          <button
-            key={n}
-            className="btn"
-            data-active={nLayers === n}
-            onClick={() => selectCount(n)}
-            style={{
-              minWidth: 36,
-              background: nLayers === n ? "var(--ek-soil)" : undefined,
-              color: nLayers === n ? "var(--ek-root)" : undefined,
-              borderColor: nLayers === n ? "var(--ek-soil)" : undefined,
-              fontFamily: "var(--font-mono)",
-              fontWeight: 700,
-            }}
-          >
-            {n}
-          </button>
-        ))}
-        <span className="muted" style={{ fontSize: "0.78rem" }}>
-          {nLayers === 1 ? "layer" : "layers"}
-        </span>
-      </div>
-
-      {/* Preset chips for selected count */}
-      <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
-        {schemesForCount.map(s => {
-          const active = matchedScheme?.key === s.key;
-          return (
-            <button key={s.key} className="btn" onClick={() => selectScheme(s)}
-              style={{
-                background: active ? "var(--ek-water)" : undefined,
-                color: active ? "var(--ek-root)" : undefined,
-                borderColor: active ? "var(--ek-water)" : undefined,
-                fontFamily: "var(--font-mono)", fontSize: "0.72rem",
-              }}>
-              {s.shortLabel}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Depth profile diagram */}
-      <DepthProfileDiagram layers={value} />
-    </div>
-  );
-}
+import { usePlan } from "../../hooks/usePlan";
+import {
+  GENOTYPE_FILL, GENOTYPE_STROKE, DOSE_STROKE_WIDTH, DOSE_LABEL,
+} from "../../utils/palette";
+import {
+  SoilMark, BdMark, NminMark,
+} from "../shared/SampleShapes";
+import { computeMdd, powerAtMdd, sweepPowerAtMdd } from "../../engine/power";
 
 // ── Mini field grid ───────────────────────────────────────────────────────────
 // Shows which plots are active under the current plan.
 // 8 blocks in a 2×4 grid; each block: 2 rows (genotype) × 3 cols (dose).
 
-const PLOT_W = 28, PLOT_H = 24, PLOT_GAP = 4, BLOCK_GAP = 16;
+const PLOT_W = 34, PLOT_H = 34, PLOT_GAP = 4, BLOCK_GAP = 16;
 const BLOCK_W = 3 * PLOT_W + 2 * PLOT_GAP;
 const BLOCK_H = 2 * PLOT_H + PLOT_GAP;
+
+const STACK_AREA_TOP = 4;
+const STACK_AREA_H = 20;
+const BOTTOM_ROW_Y_OFFSET = 28;
+const SIDE_INSET = 6;
+const MARKER_R = 2.2;
+const MARKER_GAP = 5.5;
+const BOTTOM_R = 2.4;
+const BOTTOM_SPACING = 7;
+
+const BLOCK_BORDER_PAD = 5;   // block rects extend 4 units outside each plot group; +1 for stroke
 
 function MiniFieldGrid({ plan }: { plan: SamplingPlan }) {
   const svgW = 4 * BLOCK_W + 3 * BLOCK_GAP;
   const svgH = 2 * BLOCK_H + BLOCK_GAP;
+  const vbX = -BLOCK_BORDER_PAD;
+  const vbY = -BLOCK_BORDER_PAD;
+  const vbW = svgW + 2 * BLOCK_BORDER_PAD;
+  const vbH = svgH + 2 * BLOCK_BORDER_PAD;
 
   const activeBlocks = ALL_BLOCKS.slice(0, plan.nBlocks);
   const bdBlocks = ALL_BLOCKS.slice(0, Math.min(plan.nBdBlocks, plan.nBlocks));
@@ -249,20 +80,23 @@ function MiniFieldGrid({ plan }: { plan: SamplingPlan }) {
     }
   }
 
-  // Sample type indicators – show per-cell dots at bottom
-  const dotR = 2.5;
-  const dotTypes = [
-    { key: "soil",  color: "var(--ek-depth-3)", show: plan.depths.length > 0 },
-    { key: "leaf",  color: TOKENS.stem,       show: plan.includeLeafComposites },
-    { key: "nmin",  color: TOKENS.water,      show: plan.includeNmin },
-  ];
-  const activeDots = dotTypes.filter(d => d.show);
-  const bdShown = plan.nBdBlocks > 0 && plan.bdRingDepths.length > 0;
+  const nSoil = plan.depths.length;
+  const nBd = plan.bdRingDepths.length;
+  const soilStackH = Math.max(0, nSoil - 1) * MARKER_GAP;
+  const bdStackH = Math.max(0, nBd - 1) * MARKER_GAP;
+  const bottomMarks = [
+    plan.includeNmin ? { key: "nmin" as const } : null,
+  ].filter(Boolean) as { key: "nmin" }[];
+  const bdShown = plan.nBdBlocks > 0 && nBd > 0;
+  const soilShown = nSoil > 0;
 
   return (
     <div>
-      <svg width={svgW} height={svgH} style={{ display: "block", overflow: "visible" }}>
-        {/* Block separators */}
+      <svg
+        viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`}
+        preserveAspectRatio="xMidYMid meet"
+        style={{ display: "block", width: "100%", maxWidth: vbW * 2, height: "auto" }}
+      >
         {ALL_BLOCKS.map(block => {
           const bi = block - 1;
           const bRow = Math.floor(bi / 4);
@@ -280,37 +114,38 @@ function MiniFieldGrid({ plan }: { plan: SamplingPlan }) {
         {cells.map((c, i) => {
           const fill = c.active ? GENOTYPE_FILL[c.geno] : "var(--soil-08)";
           const stroke = c.active ? GENOTYPE_STROKE[c.geno] : "var(--panel-border)";
+          const soilStartY = c.y + STACK_AREA_TOP + (STACK_AREA_H - soilStackH) / 2;
+          const bdStartY = c.y + STACK_AREA_TOP + (STACK_AREA_H - bdStackH) / 2;
+          const bottomCy = c.y + BOTTOM_ROW_Y_OFFSET;
           return (
             <g key={i}>
               <rect x={c.x} y={c.y} width={PLOT_W} height={PLOT_H}
-                rx={3} fill={fill} stroke={stroke} strokeWidth={1} />
-              {/* sample-type dots */}
-              {c.active && activeDots.map((d, di) => (
-                <circle
-                  key={d.key}
-                  cx={c.x + 6 + di * (dotR * 2 + 3)}
-                  cy={c.y + PLOT_H - 6}
-                  r={dotR}
-                  fill={d.color}
-                />
+                rx={3} fill={fill} stroke={stroke}
+                strokeWidth={c.active ? DOSE_STROKE_WIDTH[c.dose] : 0.8} />
+
+              {c.active && soilShown && Array.from({ length: nSoil }).map((_, di) => (
+                <SoilMark key={`s-${di}`}
+                  cx={c.x + SIDE_INSET}
+                  cy={soilStartY + di * MARKER_GAP}
+                  r={MARKER_R} />
               ))}
-              {/* BD core marker — open ring on plots in the first N blocks */}
-              {c.bd && (
-                <circle
-                  cx={c.x + PLOT_W - 6}
-                  cy={c.y + 6}
-                  r={3}
-                  fill="none"
-                  stroke={TOKENS.slate}
-                  strokeWidth={1.2}
-                />
-              )}
+
+              {c.bd && Array.from({ length: nBd }).map((_, di) => (
+                <BdMark key={`b-${di}`}
+                  cx={c.x + PLOT_W - SIDE_INSET}
+                  cy={bdStartY + di * MARKER_GAP}
+                  r={MARKER_R} />
+              ))}
+
+              {c.active && bottomMarks.map((m, di) => {
+                const cx = c.x + PLOT_W / 2 + (di - (bottomMarks.length - 1) / 2) * BOTTOM_SPACING;
+                return <NminMark key={m.key} cx={cx} cy={bottomCy} r={BOTTOM_R} />;
+              })}
             </g>
           );
         })}
       </svg>
 
-      {/* Legend */}
       <div className="row" style={{ marginTop: 10, flexWrap: "wrap", gap: 10 }}>
         <span className="row" style={{ gap: 4, fontSize: "0.72rem", color: "var(--text-secondary)" }}>
           <svg width={10} height={10}><circle cx={5} cy={5} r={4} fill={GENOTYPE_FILL.CCN51} stroke={GENOTYPE_STROKE.CCN51} strokeWidth="0.8"/></svg>
@@ -320,18 +155,44 @@ function MiniFieldGrid({ plan }: { plan: SamplingPlan }) {
           <svg width={10} height={10}><circle cx={5} cy={5} r={4} fill={GENOTYPE_FILL.PS1319} stroke={GENOTYPE_STROKE.PS1319} strokeWidth="0.8"/></svg>
           PS 13.19
         </span>
-        {activeDots.map(d => (
-          <span key={d.key} className="row" style={{ gap: 4, fontSize: "0.72rem", color: "var(--text-secondary)" }}>
-            <svg width={8} height={8}><circle cx={4} cy={4} r={3} fill={d.color}/></svg>
-            {d.key === "soil" ? "Soil sample" : d.key === "leaf" ? "Leaf composite" : "N-min"}
-          </span>
-        ))}
-        {bdShown && (
+        {soilShown && (
           <span className="row" style={{ gap: 4, fontSize: "0.72rem", color: "var(--text-secondary)" }}>
-            <svg width={10} height={10}><circle cx={5} cy={5} r={3.5} fill="none" stroke={TOKENS.slate} strokeWidth="1.2"/></svg>
-            BD core
+            <svg width={10} height={Math.max(10, nSoil * MARKER_GAP + 4)}>
+              {Array.from({ length: nSoil }).map((_, di) => (
+                <SoilMark key={di} cx={5} cy={3 + di * MARKER_GAP} r={MARKER_R} />
+              ))}
+            </svg>
+            Soil sample ({nSoil}/plot)
           </span>
         )}
+        {bdShown && (
+          <span className="row" style={{ gap: 4, fontSize: "0.72rem", color: "var(--text-secondary)" }}>
+            <svg width={10} height={Math.max(10, nBd * MARKER_GAP + 4)}>
+              {Array.from({ length: nBd }).map((_, di) => (
+                <BdMark key={di} cx={5} cy={3 + di * MARKER_GAP} r={MARKER_R} />
+              ))}
+            </svg>
+            BD core ({nBd}/plot)
+          </span>
+        )}
+        {bottomMarks.map(m => (
+          <span key={m.key} className="row" style={{ gap: 4, fontSize: "0.72rem", color: "var(--text-secondary)" }}>
+            <svg width={10} height={10}>
+              <NminMark cx={5} cy={5} r={BOTTOM_R} />
+            </svg>
+            N-min analysis
+          </span>
+        ))}
+        {(["L", "M", "H"] as DoseCode[]).map(d => (
+          <span key={d} className="row" style={{ gap: 4, fontSize: "0.72rem", color: "var(--text-secondary)" }}>
+            <svg width={16} height={10}>
+              <rect x={1} y={1} width={14} height={8} rx={1.5}
+                fill="none" stroke="var(--text-secondary)"
+                strokeWidth={DOSE_STROKE_WIDTH[d]} />
+            </svg>
+            {DOSE_LABEL[d]} kg N
+          </span>
+        ))}
         <span className="row" style={{ gap: 4, fontSize: "0.72rem", color: "var(--text-muted)" }}>
           <svg width={10} height={10}><rect x={1} y={1} width={8} height={8} rx={1} fill="var(--soil-08)" stroke="var(--panel-border)" strokeWidth="0.8"/></svg>
           Excluded
@@ -344,33 +205,21 @@ function MiniFieldGrid({ plan }: { plan: SamplingPlan }) {
 // ── Main tab ──────────────────────────────────────────────────────────────────
 
 export function PlanTab() {
-  const [plan, setPlan] = useState<SamplingPlan>(loadPlan);
-
-  function update(partial: Partial<SamplingPlan>) {
-    const next = { ...plan, ...partial };
-    // Keep BD blocks within the active block count.
-    const bdMax = maxBdBlocks(next);
-    if (next.nBdBlocks > bdMax) next.nBdBlocks = bdMax;
-    setPlan(next);
-    savePlan(next);
-  }
-
-  function handleReset() {
-    if (!confirm("Reset to the default full-factorial plan?")) return;
-    setPlan(resetPlan());
-  }
+  const { plan } = usePlan();
 
   const counts = planCounts(plan);
   const issues = validatePlan(plan);
-  const errors  = issues.filter(i => i.level === "error");
+  const errors = issues.filter(i => i.level === "error");
   const warnings = issues.filter(i => i.level === "warn");
 
   return (
     <div className="column" style={{ gap: 14 }}>
 
-      {/* ── Summary counts ────────────────────────────────── */}
       <div className="card">
         <h2 className="card-title">Derived sample counts</h2>
+        <div className="muted" style={{ fontSize: "0.78rem", marginBottom: 10 }}>
+          Adjust the plan in the left panel. All counts update live.
+        </div>
         <div className="stat-grid">
           <div className="stat">
             <span className="stat-label">Plots</span>
@@ -395,22 +244,13 @@ export function PlanTab() {
             <span className="stat-sub muted">1 core per (genotype × dose) plot in each selected block, one Kopecky ring per depth</span>
           </div>
           <div className="stat">
-            <span className="stat-label">Leaf composites</span>
-            <span className="stat-value">{counts.leaf_composites}</span>
-            <span className="stat-sub">{plan.includeLeafComposites ? "1 per plot" : "excluded"}</span>
-            {plan.includeLeafComposites && (
-              <span className="stat-sub muted">{counts.leaf_subsamples} leaves ({plan.nLeafTreesPerPlot} trees/plot)</span>
-            )}
-          </div>
-          <div className="stat">
-            <span className="stat-label">N-min samples</span>
-            <span className="stat-value">{counts.nmin_samples}</span>
-            <span className="stat-sub">{plan.includeNmin ? "1 per plot" : "excluded"}</span>
+            <span className="stat-label">N-min measurements</span>
+            <span className="stat-value">{counts.nmin_measurements}</span>
+            <span className="stat-sub">{plan.includeNmin ? "1 per plot, run on the 0–10 cm sample" : "excluded"}</span>
           </div>
         </div>
       </div>
 
-      {/* ── Issues ────────────────────────────────────────── */}
       {issues.length > 0 && (
         <div className="card">
           <div className="column" style={{ gap: 6 }}>
@@ -430,168 +270,341 @@ export function PlanTab() {
         </div>
       )}
 
-      {/* ── Design overview ────────────────────────────────── */}
-      <div className="card">
-        <h2 className="card-title">Design overview</h2>
-        <div className="row" style={{ gap: 18, flexWrap: "wrap", marginBottom: 10, fontSize: "0.78rem", color: "var(--text-secondary)" }}>
-          <span><strong style={{ color: "var(--text-primary)" }}>{counts.plots}</strong> plots</span>
-          <span><strong style={{ color: "var(--text-primary)" }}>{counts.soil_samples}</strong> soil samples for analysis</span>
-          <span><strong style={{ color: "var(--text-primary)" }}>{counts.bd_rings}</strong> BD cores</span>
-        </div>
-        <MiniFieldGrid plan={plan} />
-      </div>
-
-      {/* ── Treatment factors ─────────────────────────────── */}
-      <div className="card">
-        <h2 className="card-title">Treatment factors</h2>
-
-        <div style={{ marginBottom: 14 }}>
-          <SectionTitle>Genotypes</SectionTitle>
-          <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
-            {(ALL_GENOTYPES as GenotypeCode[]).map(g => (
-              <CheckChip key={g}
-                label={GENOTYPE_LABELS[g]}
-                checked={plan.genotypes.includes(g)}
-                onChange={() => update({ genotypes: toggle(plan.genotypes, g) })}
-                color={g === "CCN51" ? "var(--ek-stem)" : "var(--ek-berry)"}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div style={{ marginBottom: 14 }}>
-          <SectionTitle>N doses</SectionTitle>
-          <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
-            {(ALL_DOSES as DoseCode[]).map(d => (
-              <CheckChip key={d}
-                label={`${DOSE_N_KG_HA_YR[d]} kg N ha⁻¹ yr⁻¹`}
-                checked={plan.doses.includes(d)}
-                onChange={() => update({ doses: toggle(plan.doses, d) })}
-                color="var(--ek-seed)"
-              />
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <SectionTitle>Replicate blocks</SectionTitle>
-          <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
-            <input type="range" min={1} max={8} value={plan.nBlocks}
-              onChange={e => update({ nBlocks: Number(e.target.value) })}
-              style={{ width: 160, accentColor: "var(--ek-soil)" }} />
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: "1rem", fontWeight: 700, minWidth: 24 }}>
-              {plan.nBlocks}
-            </span>
-            <span className="muted" style={{ fontSize: "0.78rem" }}>of 8</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Soil sampling ─────────────────────────────────── */}
-      <div className="card">
-        <h2 className="card-title">Soil sampling — composite samples</h2>
-        <DepthSchemePicker value={plan.depths} onChange={depths => update({ depths })} />
-        {plan.depths.length > 0 && (
-          <div style={{ marginTop: 16 }}>
-            <SectionTitle>Subsamples per plot per depth</SectionTitle>
-            <div className="row" style={{ gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-              <input type="range" min={1} max={20} value={plan.nSubsamplesPerPlot}
-                onChange={e => update({ nSubsamplesPerPlot: Number(e.target.value) })}
-                style={{ width: 160, accentColor: "var(--ek-soil)" }} />
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: "1rem", fontWeight: 700, minWidth: 24 }}>
-                {plan.nSubsamplesPerPlot}
-              </span>
-              <span className="muted" style={{ fontSize: "0.78rem" }}>
-                composited into 1 bag per depth
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="card">
-        <h2 className="card-title">Soil sampling — bulk density rings</h2>
-        <div className="column" style={{ gap: 12 }}>
-          <div>
-            <SectionTitle>BD sampling blocks (first N)</SectionTitle>
-            <div className="row" style={{ gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-              <input type="range" min={0} max={Math.max(1, maxBdBlocks(plan))} value={plan.nBdBlocks}
-                onChange={e => update({ nBdBlocks: Number(e.target.value) })}
-                style={{ width: 160, accentColor: "var(--ek-soil)" }} />
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: "1rem", fontWeight: 700, minWidth: 24 }}>
-                {plan.nBdBlocks}
-              </span>
-              <span className="muted" style={{ fontSize: "0.78rem" }}>
-                of {maxBdBlocks(plan)} blocks
-              </span>
-            </div>
-            <div className="muted" style={{ fontSize: "0.72rem", marginTop: 6 }}>
-              One core per (genotype × dose) plot in each selected block, one Kopecky ring per depth. Total BD points = {counts.bd_points}; total rings = {counts.bd_rings}.
-            </div>
-          </div>
-          {plan.nBdBlocks > 0 && (
-            <div>
-              <SectionTitle>BD ring depths</SectionTitle>
-              <DepthSchemePicker value={plan.bdRingDepths} onChange={bdRingDepths => update({ bdRingDepths })} />
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Tree measurements ─────────────────────────────── */}
-      <div className="card">
-        <h2 className="card-title">Tree measurements</h2>
-        <SectionTitle>Central trees per plot</SectionTitle>
-        <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
-          <input type="range" min={1} max={12} value={plan.treesPerPlot}
-            onChange={e => update({ treesPerPlot: Number(e.target.value) })}
-            style={{ width: 160, accentColor: "var(--ek-soil)" }} />
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "1rem", fontWeight: 700, minWidth: 24 }}>
-            {plan.treesPerPlot}
-          </span>
-          <span className="muted" style={{ fontSize: "0.78rem" }}>of 12 max</span>
-        </div>
-      </div>
-
-      {/* ── Other samples ─────────────────────────────────── */}
-      <div className="card">
-        <h2 className="card-title">Other samples</h2>
-        <div className="row" style={{ gap: 16, flexWrap: "wrap", marginBottom: plan.includeLeafComposites ? 14 : 0 }}>
-          <CheckChip label="Leaf composites" checked={plan.includeLeafComposites}
-            onChange={() => update({ includeLeafComposites: !plan.includeLeafComposites })} />
-          <CheckChip label="N-min incubation" checked={plan.includeNmin}
-            onChange={() => update({ includeNmin: !plan.includeNmin })} />
-        </div>
-        {plan.includeLeafComposites && (
-          <div>
-            <SectionTitle>Trees sampled per plot (leaf composite)</SectionTitle>
-            <div className="row" style={{ gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-              <input type="range" min={1} max={plan.treesPerPlot} value={plan.nLeafTreesPerPlot}
-                onChange={e => update({ nLeafTreesPerPlot: Number(e.target.value) })}
-                style={{ width: 160, accentColor: "var(--ek-stem)" }} />
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: "1rem", fontWeight: 700, minWidth: 24 }}>
-                {plan.nLeafTreesPerPlot}
-              </span>
-              <span className="muted" style={{ fontSize: "0.78rem" }}>
-                of {plan.treesPerPlot} measurement trees
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Reset ─────────────────────────────────────────── */}
-      <div className="card">
-        <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-          <span className="muted" style={{ fontSize: "0.78rem" }}>
-            Changes save automatically. The seed button in Overview uses this plan.
-          </span>
-          <button className="btn" onClick={handleReset}>
-            <RotateCcw size={14} /> Reset to defaults
-          </button>
-        </div>
-      </div>
+      <DesignAndPowerCard plan={plan} counts={counts} />
 
     </div>
+  );
+}
+
+// ── Combined Design overview + Power analysis card ───────────────────────────
+
+type DesignSub = "overview" | "power";
+
+function DesignAndPowerCard({ plan, counts }: { plan: SamplingPlan; counts: ReturnType<typeof planCounts> }) {
+  const [sub, setSub] = useState<DesignSub>("overview");
+
+  return (
+    <div className="card">
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
+        <h2 className="card-title" style={{ margin: 0 }}>
+          {sub === "overview" ? "Design overview" : "Power analysis: SOC / TN stock detection"}
+        </h2>
+        <nav className="entry-nav compact" aria-label="Design sections" style={{ margin: 0 }}>
+          <button
+            className="entry-nav-btn"
+            data-active={sub === "overview"}
+            onClick={() => setSub("overview")}
+          >
+            Overview
+          </button>
+          <button
+            className="entry-nav-btn"
+            data-active={sub === "power"}
+            onClick={() => setSub("power")}
+          >
+            Power
+          </button>
+        </nav>
+      </div>
+
+      {sub === "overview" && (
+        <>
+          <div className="row" style={{ gap: 18, flexWrap: "wrap", marginBottom: 10, fontSize: "0.78rem", color: "var(--text-secondary)" }}>
+            <span><strong style={{ color: "var(--text-primary)" }}>{counts.plots}</strong> plots</span>
+            <span><strong style={{ color: "var(--text-primary)" }}>{counts.soil_samples}</strong> soil samples for analysis</span>
+            <span><strong style={{ color: "var(--text-primary)" }}>{counts.bd_rings}</strong> BD cores</span>
+          </div>
+          <MiniFieldGrid plan={plan} />
+        </>
+      )}
+
+      {sub === "power" && <PowerAnalysisBody plan={plan} />}
+    </div>
+  );
+}
+
+// ── Power analysis card ──────────────────────────────────────────────────────
+// Minimum detectable difference (MDD) between two dose means for SOC (or TN)
+// stocks, as a function of between-plot CV and sub-core count.
+// See engine/power.ts for the formula.
+
+const DEFAULT_MEAN_STOCK = 30;      // Mg C ha⁻¹ per 0–50 cm, cocoa-clay ballpark
+const DEFAULT_BETWEEN_CV = 12;      // %
+const DEFAULT_WITHIN_CV = 30;       // %
+const DEFAULT_TARGET_MDD = 3;       // Mg C ha⁻¹ (≈ 10 % of a 30 Mg C ha⁻¹ stock)
+const CV_CHART_GRID = Array.from({ length: 23 }, (_, i) => i);  // 0…22 %, 1 % step
+const SUBCORE_COMPARE = [1, 4, 10];
+const SUBCORE_COLORS: Record<number, string> = {
+  1:  "var(--ek-terracotta)",
+  2:  "var(--ek-seed)",
+  4:  "var(--ek-stem)",
+  6:  "var(--ek-water)",
+  10: "var(--ek-berry)",
+};
+const CURRENT_LINE_COLOR = "var(--ek-stem)";
+const MONO_FONT = "'Azeret Mono', ui-monospace, Menlo, Consolas, monospace";
+
+function PowerAnalysisBody({ plan }: { plan: SamplingPlan }) {
+  const [meanStock, setMeanStock]       = useState(DEFAULT_MEAN_STOCK);
+  const [betweenCv, setBetweenCv]       = useState(DEFAULT_BETWEEN_CV);
+  const [withinCv,  setWithinCv]        = useState(DEFAULT_WITHIN_CV);
+  const [alphaPct,  setAlphaPct]        = useState(5);   // 5 % two-sided
+  const [powerPct,  setPowerPct]        = useState(80);  // 80 % target power
+  const [nSubcores, setNSubcores]       = useState(plan.nSubsamplesPerPlot);
+  const [targetMdd, setTargetMdd]       = useState(DEFAULT_TARGET_MDD);
+
+  const nBlocks = plan.nBlocks;
+  const nGenotypes = plan.genotypes.length;
+  const planSubcores = plan.nSubsamplesPerPlot;
+
+  const mddBase = useMemo(() => ({
+    nBlocks, nGenotypes,
+    meanStock,
+    withinPlotCvPct: withinCv,
+    alpha: alphaPct / 100,
+    power: powerPct / 100,
+  }), [nBlocks, nGenotypes, meanStock, withinCv, alphaPct, powerPct]);
+
+  const powerBase = useMemo(() => ({
+    nBlocks, nGenotypes,
+    meanStock,
+    withinPlotCvPct: withinCv,
+    alpha: alphaPct / 100,
+    targetMdd,
+  }), [nBlocks, nGenotypes, meanStock, withinCv, alphaPct, targetMdd]);
+
+  // MDD (at target power) under the current settings — used for the
+  // secondary stat tiles and the "MDD needed" sub-label.
+  const current = useMemo(() => computeMdd({
+    ...mddBase, betweenPlotCvPct: betweenCv, nSubcores,
+  }), [mddBase, betweenCv, nSubcores]);
+
+  // Achieved power (at target MDD) under the current settings — primary KPI.
+  const achievedPower = useMemo(() => powerAtMdd({
+    ...powerBase, betweenPlotCvPct: betweenCv, nSubcores,
+  }), [powerBase, betweenCv, nSubcores]);
+
+  const targetPowerFrac = powerPct / 100;
+  const targetMet = achievedPower >= targetPowerFrac;
+
+  // Sub-core curves shown in the chart: the fixed comparison set plus the
+  // user's current choice (so moving the Sub-cores input always moves a line).
+  const subcoreLines = useMemo(() => {
+    const set = new Set<number>([...SUBCORE_COMPARE, nSubcores]);
+    return Array.from(set).sort((a, b) => a - b);
+  }, [nSubcores]);
+
+  // Power-vs-CV chart data. Every input feeds sweepPowerAtMdd, so changing any
+  // of them (mean, within CV, α, target MDD, n_subcores, blocks, genotypes)
+  // reshapes the curves in real time.
+  const chartRows = useMemo(() => {
+    const sweep = sweepPowerAtMdd(powerBase, CV_CHART_GRID, subcoreLines);
+    return CV_CHART_GRID.map(cv => {
+      const row: Record<string, number> = { cvPct: cv };
+      for (const sc of subcoreLines) {
+        const r = sweep.find(x => x.cvPct === cv && x.nSubcores === sc);
+        row[`subcores_${sc}`] = r ? Number((r.power * 100).toFixed(2)) : 0;
+      }
+      return row;
+    });
+  }, [powerBase, subcoreLines]);
+
+  return (
+    <>
+      <div className="muted" style={{ fontSize: "0.76rem", marginBottom: 10 }}>
+        Achieved power to detect a{" "}
+        <strong style={{ color: "var(--text-primary)" }}>{targetMdd}</strong>{" "}
+        Mg C ha⁻¹ difference between two dose means —{" "}
+        <strong style={{ color: "var(--text-primary)" }}>{nBlocks * nGenotypes}</strong>{" "}
+        plots/dose ({nBlocks}×{nGenotypes}),{" "}
+        <strong style={{ color: "var(--text-primary)" }}>{nSubcores}</strong>{" "}
+        sub-cores composited. Two-sided t-test.
+        {nSubcores !== planSubcores && (
+          <>
+            {" "}<span style={{ color: "var(--ek-terracotta)" }}>
+              Plan uses {planSubcores}.
+            </span>{" "}
+            <button
+              onClick={() => setNSubcores(planSubcores)}
+              style={{
+                background: "none", border: "none", padding: 0,
+                color: "var(--text-secondary)", textDecoration: "underline",
+                cursor: "pointer", font: "inherit",
+              }}
+            >
+              reset
+            </button>
+          </>
+        )}
+      </div>
+
+      <div className="row" style={{ gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+        <PowerInput label="Mean" unit="Mg C ha⁻¹"
+          value={meanStock} min={1}  max={200} step={1}
+          onChange={setMeanStock} />
+        <PowerInput label="Target MDD" unit="Mg C ha⁻¹"
+          value={targetMdd} min={0.1} max={50}  step={0.1}
+          onChange={setTargetMdd} />
+        <PowerInput label="Sub-cores" unit="n/plot"
+          value={nSubcores} min={1}  max={20}  step={1}
+          onChange={setNSubcores} />
+        <PowerInput label="CV between" unit="%"
+          value={betweenCv} min={1}  max={60}  step={0.5}
+          onChange={setBetweenCv} />
+        <PowerInput label="CV within" unit="%"
+          value={withinCv}  min={0}  max={100} step={1}
+          onChange={setWithinCv} />
+        <PowerInput label="α" unit="%"
+          value={alphaPct}  min={1}  max={20}  step={0.5}
+          onChange={setAlphaPct} />
+        <PowerInput label="Target power" unit="%"
+          value={powerPct}  min={50} max={99}  step={1}
+          onChange={setPowerPct} />
+      </div>
+
+      <div className="row" style={{ gap: 14, flexWrap: "wrap", alignItems: "stretch" }}>
+        <div
+          className="column"
+          style={{ gap: 8, flex: "1 1 200px", minWidth: 180, maxWidth: 260 }}
+        >
+          <PowerStat
+            label={`Power @ ${targetMdd} Mg C ha⁻¹`}
+            value={`${(achievedPower * 100).toFixed(1)}%`}
+            sub={targetMet
+              ? `≥ ${powerPct}% target — detectable`
+              : `< ${powerPct}% target — under-powered`}
+            tone={targetMet ? "pass" : "fail"} />
+          <PowerStat label="MDD @ target power"
+            value={`${current.mddAbsolute.toFixed(2)}`}
+            sub={`Mg C ha⁻¹ · α=${alphaPct}% · pw=${powerPct}%`} />
+          <PowerStat label="σ total (plot)"
+            value={current.sigmaTotal.toFixed(2)}
+            sub={`CVₜ ${current.cvTotalPct.toFixed(1)}% · df ${current.df}`} />
+          <PowerStat label="Composite effect"
+            value={current.sigmaWithinEffective.toFixed(2)}
+            sub={`σ within / √${nSubcores}`} />
+        </div>
+
+        <div style={{ flex: "2 1 360px", minHeight: 240, minWidth: 320 }}>
+          <ResponsiveContainer width="100%" height="100%" minHeight={240}>
+            <LineChart data={chartRows} margin={{ top: 6, right: 16, left: 0, bottom: 18 }}>
+              <CartesianGrid stroke="var(--panel-border)" strokeDasharray="3 3" />
+              <XAxis
+                dataKey="cvPct"
+                type="number"
+                domain={[CV_CHART_GRID[0], CV_CHART_GRID[CV_CHART_GRID.length - 1]]}
+                tick={{ fontFamily: MONO_FONT, fontSize: 10, fill: "var(--text-secondary)" }}
+                label={{ value: "Between-plot CV (%)", position: "insideBottom", offset: -4,
+                          fontSize: 11, fill: "var(--text-secondary)" }}
+              />
+              <YAxis
+                domain={[0, 100]}
+                ticks={[0, 20, 40, 60, 80, 100]}
+                tick={{ fontFamily: MONO_FONT, fontSize: 10, fill: "var(--text-secondary)" }}
+                label={{ value: `Power (%) at Δ = ${targetMdd} Mg C ha⁻¹`,
+                          angle: -90, position: "insideLeft",
+                          fontSize: 11, fill: "var(--text-secondary)" }}
+              />
+              <Tooltip
+                contentStyle={{ fontFamily: MONO_FONT, fontSize: 11 }}
+                formatter={(v) => {
+                  const n = typeof v === "number" ? v : Number(v);
+                  return Number.isFinite(n) ? `${n.toFixed(1)}%` : String(v);
+                }}
+                labelFormatter={(cv) => `CV between = ${cv}%`} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <ReferenceArea y1={powerPct} y2={100}
+                fill="var(--ek-stem)" fillOpacity={0.08} ifOverflow="visible" />
+              <ReferenceLine y={powerPct}
+                stroke="var(--ek-stem)" strokeDasharray="4 3"
+                label={{ value: `target ${powerPct}%`, position: "insideTopRight",
+                          fontSize: 10, fill: "var(--text-secondary)" }} />
+              <ReferenceLine x={betweenCv}
+                stroke="var(--text-muted)" strokeDasharray="2 3"
+                label={{ value: `CV ${betweenCv}%`, position: "insideTop",
+                          fontSize: 10, fill: "var(--text-secondary)" }} />
+              {subcoreLines.map(sc => {
+                const isCurrent = sc === nSubcores;
+                return (
+                  <Line key={sc} type="monotone" dataKey={`subcores_${sc}`}
+                    name={`${sc} sub-core${sc === 1 ? "" : "s"}${isCurrent ? " (current)" : ""}`}
+                    stroke={isCurrent ? CURRENT_LINE_COLOR : (SUBCORE_COLORS[sc] ?? "var(--ek-slate)")}
+                    strokeWidth={isCurrent ? 3 : 1.5}
+                    strokeOpacity={isCurrent ? 1 : 0.55}
+                    strokeDasharray={isCurrent ? undefined : "4 3"}
+                    dot={isCurrent ? { r: 3 } : false}
+                    isAnimationActive={false} />
+                );
+              })}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="muted" style={{ fontSize: "0.7rem", marginTop: 8 }}>
+        Green band = at or above the {powerPct}% target; vertical dashes mark the current between-plot CV. Solid line = your selected sub-core count; dashed lines are reference levels. CV between = residual plot-to-plot SD after compositing; CV within is averaged down by √(sub-cores). Macedo 2022 cocoa-clay 0–20 cm OM suggests ≈ 10–15%.
+      </div>
+    </>
+  );
+}
+
+function PowerStat({ label, value, sub, tone }: {
+  label: string; value: string; sub: string;
+  tone?: "neutral" | "pass" | "fail";
+}) {
+  const t = tone ?? "neutral";
+  const borderColor =
+    t === "pass" ? "var(--ek-stem)" :
+    t === "fail" ? "var(--ek-terracotta)" :
+    "var(--panel-border)";
+  const valueColor =
+    t === "pass" ? "var(--ek-stem)" :
+    t === "fail" ? "var(--ek-terracotta)" :
+    "var(--text-primary)";
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", gap: 2,
+      padding: "6px 10px",
+      border: `1px solid ${borderColor}`,
+      borderLeftWidth: t === "neutral" ? 1 : 3,
+      borderRadius: 6,
+      background: "var(--panel-bg)",
+    }}>
+      <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.03em" }}>{label}</span>
+      <span style={{ fontFamily: MONO_FONT, fontSize: "1.0rem", color: valueColor, fontWeight: 600 }}>{value}</span>
+      <span style={{ fontSize: "0.68rem", color: "var(--text-secondary)" }}>{sub}</span>
+    </div>
+  );
+}
+
+function PowerInput(props: {
+  label: string; unit: string;
+  value: number; min: number; max: number; step: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <label className="column" style={{ gap: 2, fontSize: "0.72rem", minWidth: 92, flex: "1 1 100px" }}>
+      <span style={{ color: "var(--text-secondary)" }}>
+        {props.label} <span className="muted">({props.unit})</span>
+      </span>
+      <input
+        type="number"
+        value={props.value}
+        min={props.min}
+        max={props.max}
+        step={props.step}
+        onChange={e => {
+          const v = Number(e.target.value);
+          if (Number.isFinite(v)) props.onChange(v);
+        }}
+        style={{
+          fontFamily: MONO_FONT, fontSize: "0.82rem",
+          padding: "3px 6px",
+          border: "1px solid var(--panel-border)", borderRadius: 4,
+          background: "var(--panel-bg)", color: "var(--text-primary)",
+          width: "100%",
+        }}
+      />
+    </label>
   );
 }

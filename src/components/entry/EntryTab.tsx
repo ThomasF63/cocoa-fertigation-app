@@ -2,15 +2,13 @@ import { useState } from "react";
 import { TreeMeasurementForm } from "./TreeMeasurementForm";
 import { SoilSampleForm } from "./SoilSampleForm";
 import { BulkDensityForm } from "./BulkDensityForm";
-import { LeafCompositeForm } from "./LeafCompositeForm";
 
-type Sub = "trees" | "soil" | "bd" | "leaves";
+type Sub = "trees" | "soil" | "bd";
 
 const SUBS: { key: Sub; label: string }[] = [
-  { key: "trees",  label: "Trees" },
-  { key: "soil",   label: "Soil" },
-  { key: "bd",     label: "BD" },
-  { key: "leaves", label: "Leaves" },
+  { key: "trees", label: "Trees" },
+  { key: "soil",  label: "Soil" },
+  { key: "bd",    label: "BD" },
 ];
 
 export function EntryTab() {
@@ -31,10 +29,9 @@ export function EntryTab() {
         ))}
       </nav>
 
-      {sub === "trees"  && <TreeMeasurementForm />}
-      {sub === "soil"   && <SoilSampleForm />}
-      {sub === "bd"     && <BulkDensityForm />}
-      {sub === "leaves" && <LeafCompositeForm />}
+      {sub === "trees" && <TreeMeasurementForm />}
+      {sub === "soil"  && <SoilSampleForm />}
+      {sub === "bd"    && <BulkDensityForm />}
     </div>
   );
 }
