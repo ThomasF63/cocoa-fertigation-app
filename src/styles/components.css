@@ -21,6 +21,19 @@
   background: var(--bg);
 }
 
+/* Solid fill behind the iOS status bar (time, battery, wifi).
+   position:fixed keeps it above all scroll content. */
+.ios-status-fill {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--ek-soil-dark);
+  border-bottom: 1px solid oklch(100% 0 0 / 0.12);
+  z-index: 600;
+}
+
 /* ===== HEADER ===== */
 .header {
   height: calc(var(--header-height) + env(safe-area-inset-top, 0px));

@@ -129,6 +129,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <div className="ios-status-fill" aria-hidden="true" />
       <AppHeader
         onToggleSidebar={toggleSidebar}
         onCycleTheme={cycleTheme}
