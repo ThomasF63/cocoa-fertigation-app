@@ -21,27 +21,14 @@
   background: var(--bg);
 }
 
-/* Solid fill behind the iOS status bar (time, battery, wifi).
-   position:fixed keeps it above all scroll content. */
-.ios-status-fill {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: env(safe-area-inset-top, 0px);
-  background: var(--ek-soil-dark);
-  border-bottom: 1px solid oklch(100% 0 0 / 0.12);
-  z-index: 600;
-}
-
 /* ===== HEADER ===== */
 .header {
-  height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+  height: var(--header-height);
   background: var(--ek-soil-dark);
   color: var(--ek-root);
   display: flex;
   align-items: center;
-  padding: env(safe-area-inset-top, 0px) var(--space-4) 0;
+  padding: 0 var(--space-4);
   gap: var(--space-3);
   flex-shrink: 0;
   border-bottom: 1px solid oklch(0% 0 0 / 0.35);
@@ -916,7 +903,7 @@ input[type="number"] {
   .stat .stat-value { font-size: 2.4rem; }
   .stat .stat-label { font-size: 0.75rem; }
 
-  .header { height: calc(56px + env(safe-area-inset-top, 0px)); padding: env(safe-area-inset-top, 0px) var(--space-4) 0; }
+  .header { height: 56px; padding: 0 var(--space-4); }
   .header-title { font-size: 0.92rem; }
 
   .data-table tbody tr:hover { background: transparent; }
