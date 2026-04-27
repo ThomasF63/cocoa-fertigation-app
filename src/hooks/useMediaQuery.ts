@@ -17,6 +17,6 @@ export function useMediaQuery(query: string): boolean {
   return matches;
 }
 
-// Matches the breakpoint used in components.css for iPad / touch / field mode,
-// below which the sidebar is hidden and the bottom bar takes over.
-export const NARROW_OR_TOUCH_QUERY = "(max-width: 1024px), (pointer: coarse)";
+// Phones only — below this width the sidebar is hidden and the bottom bar takes over.
+// Removing (pointer: coarse) lets iPads use the desktop resizable-panel layout.
+export const NARROW_OR_TOUCH_QUERY = "(max-width: 768px)";

@@ -836,13 +836,13 @@ input[type="number"] {
   grid-column: span 2;
 }
 
-/* ===== BOTTOM TAB BAR (iPad / touch) ===== */
+/* ===== BOTTOM TAB BAR (phones ≤768px only) ===== */
 .bottom-bar {
   display: none;
 }
 
-/* ===== iPad / TOUCH / FIELD MODE ===== */
-@media (max-width: 1024px), (pointer: coarse) {
+/* ===== PHONE / NARROW MODE (≤768px) ===== */
+@media (max-width: 768px) {
   body { font-size: calc(15px * var(--ui-scale, 1)); }
 
   .sidebar { display: none; }
