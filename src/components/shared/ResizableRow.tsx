@@ -1,0 +1,51 @@
+import type { CSSProperties, ReactNode } from "react";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { useMediaQuery, NARROW_OR_TOUCH_QUERY } from "../../hooks/useMediaQuery";
+
+// Horizontal two-pane split with a draggable handle. On wide screens it renders
+// a react-resizable-panels PanelGroup; position is persisted per autoSaveId.
+// On narrow / touch screens (where the sidebar is hidden and the tab content
+// tends to stack) it falls back to a flex-wrap row so the children flow onto
+// separate lines instead of being pinned side-by-side.
+export function ResizableRow({
+  autoSaveId,
+  left,
+  right,
+  defaultSize = 50,
+  minSize = 25,
+  flexBasis = "360px",
+  gap = 14,
+}: {
+  autoSaveId: string;
+  left: ReactNode;
+  right: ReactNode;
+  defaultSize?: number;
+  minSize?: number;
+  flexBasis?: string;
+  gap?: number;
+}) {
+  const isNarrow = useMediaQuery(NARROW_OR_TOUCH_QUERY);
+  if (isNarrow) {
+    return (
+      <div className="row" style={{ gap, alignItems: "stretch", flexWrap: "wrap" }}>
+        <div style={{ flex: `1 1 ${flexBasis}`, minWidth: 0, display: "flex" }}>{left}</div>
+        <div style={{ flex: `1 1 ${flexBasis}`, minWidth: 0, display: "flex" }}>{right}</div>
+      </div>
+    );
+  }
+  const paneStyle: CSSProperties = {
+    display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0,
+    width: "100%", height: "100%",
+  };
+  return (
+    <PanelGroup direction="horizontal" autoSaveId={autoSaveId}>
+      <Panel defaultSize={defaultSize} minSize={minSize}>
+        <div style={paneStyle}>{left}</div>
+      </Panel>
+      <PanelResizeHandle className="resize-handle" aria-label="Resize panels" />
+      <Panel defaultSize={100 - defaultSize} minSize={minSize}>
+        <div style={paneStyle}>{right}</div>
+      </Panel>
+    </PanelGroup>
+  );
+}

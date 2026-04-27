@@ -1,5 +1,5 @@
-// Deterministic generation of the 48-plot factorial and 576 central trees.
-// Each plot holds 12 central cocoa trees in a 6 x 2 double row running
+// Deterministic generation of the 48-plot factorial and 1152 central trees.
+// Each plot holds 24 central cocoa trees in a 12 x 2 double row running
 // north–south (mirrors the field planting pattern). Blocks are arranged
 // 4 x 2 on wide screens.
 
@@ -74,8 +74,8 @@ export function generateTrees(plots: Plot[] = generatePlots()): Tree[] {
 // the six treatment plots are arranged as 3 rows (dose) x 2 cols (genotype),
 // with genotype flipped between adjacent dose rows so each N–S column
 // alternates CCN 51 / PS 13.19 while each W–E row stays on a single dose
-// (single fertigation manifold). Within each plot, 12 central trees form a
-// 6 x 2 grid so the double rows run vertically (north–south), matching the
+// (single fertigation manifold). Within each plot, 24 central trees form a
+// 12 x 2 grid so the double rows run vertically (north–south), matching the
 // field planting orientation.
 
 export interface PlotLayoutCell {
@@ -113,7 +113,7 @@ export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
   plotsPerBlockCols: 2,   // genotypes across columns
   plotsPerBlockRows: 3,   // doses down rows
   plotW: 120,
-  plotH: 240,
+  plotH: 300,
   blockGap: 30,
   plotGap: 8,
   treeMargin: 30,
@@ -152,10 +152,10 @@ export function computeFieldLayout(
     const x = blockOriginX + genotypeCol * (plotW + plotGap);
     const y = blockOriginY + doseRow * (plotH + plotGap);
 
-    // 12 trees: 6 rows x 2 cols (double row running north–south, as
+    // 24 trees: 12 rows x 2 cols (double row running north–south, as
     // planted in the field). Rows are shifted downward to leave headroom at
     // the top of the plot for the plot label.
-    const rows = 6, cols = 2;
+    const rows = 12, cols = 2;
     const labelReserve = 36;
     const usableW = plotW - 2 * treeMargin;
     const usableH = plotH - treeMargin - labelReserve;

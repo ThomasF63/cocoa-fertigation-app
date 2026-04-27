@@ -1,4 +1,30 @@
-import { useEffect, useMemo, useState } from "react";
+import { Component, useEffect, useMemo, useRef, useState, type ErrorInfo, type ReactNode } from "react";
+import { Panel, PanelGroup, PanelResizeHandle, type ImperativePanelHandle } from "react-resizable-panels";
+
+class TabErrorBoundary extends Component<
+  { children: ReactNode; onReset: () => void },
+  { error: Error | null }
+> {
+  state = { error: null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(_error: Error, _info: ErrorInfo) { /* error already in state */ }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="card" style={{ margin: 16 }}>
+          <h2 className="card-title" style={{ color: "var(--ek-terracotta)" }}>Something went wrong</h2>
+          <div className="muted" style={{ marginBottom: 12, fontFamily: "var(--font-mono)", fontSize: "0.8rem" }}>
+            {(this.state.error as Error).message}
+          </div>
+          <button className="btn primary" onClick={() => { this.setState({ error: null }); this.props.onReset(); }}>
+            Back to Overview
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import { AppHeader } from "./components/shell/AppHeader";
 import { Sidebar } from "./components/shell/Sidebar";
 import { TabBar, type TabKey } from "./components/shell/TabBar";
@@ -10,6 +36,7 @@ import { LayoutTab } from "./components/layout/LayoutTab";
 import { EntryTab } from "./components/entry/EntryTab";
 import { ResultsTab } from "./components/results/ResultsTab";
 import { SyncTab } from "./components/io/SyncTab";
+import { useMediaQuery, NARROW_OR_TOUCH_QUERY } from "./hooks/useMediaQuery";
 
 export type Theme = "light" | "dark" | "contrast";
 const THEME_ORDER: Theme[] = ["light", "dark", "contrast"];
@@ -39,11 +66,16 @@ function clampScale(s: number): number {
 
 export default function App() {
   const [tab, setTab] = useState<TabKey>("overview");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia(NARROW_OR_TOUCH_QUERY).matches;
+  });
   const [theme, setTheme] = useState<Theme>(loadTheme);
   const [uiScale, setUiScale] = useState<number>(loadScale);
   const [pendingChanges, setPendingChanges] = useState(0);
   const [lastSync, setLastSync] = useState<string | null>(null);
+  const sidebarPanelRef = useRef<ImperativePanelHandle>(null);
+  const isNarrow = useMediaQuery(NARROW_OR_TOUCH_QUERY);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -63,6 +95,17 @@ export default function App() {
   const zoomOut = () => setUiScale(s => clampScale(s - SCALE_STEP));
   const zoomReset = () => setUiScale(SCALE_DEFAULT);
 
+  const toggleSidebar = () => {
+    if (isNarrow) {
+      setSidebarCollapsed(c => !c);
+      return;
+    }
+    const panel = sidebarPanelRef.current;
+    if (!panel) return;
+    if (panel.isCollapsed()) panel.expand();
+    else panel.collapse();
+  };
+
   const panel = useMemo(() => {
     switch (tab) {
       case "overview": return <OverviewTab onPendingChange={setPendingChanges} onLastSync={setLastSync} />;
@@ -75,10 +118,19 @@ export default function App() {
     }
   }, [tab, pendingChanges, lastSync]);
 
+  const mainContent = (
+    <main className="app-main">
+      <TabBar active={tab} onChange={setTab} />
+      <TabErrorBoundary key={tab} onReset={() => setTab("overview")}>
+        <div className="tab-panel">{panel}</div>
+      </TabErrorBoundary>
+    </main>
+  );
+
   return (
     <div className="app-shell">
       <AppHeader
-        onToggleSidebar={() => setSidebarCollapsed(c => !c)}
+        onToggleSidebar={toggleSidebar}
         onCycleTheme={cycleTheme}
         theme={theme}
         pendingChanges={pendingChanges}
@@ -90,11 +142,37 @@ export default function App() {
         zoomOutDisabled={uiScale <= SCALE_MIN + 1e-9}
       />
       <div className="app-body">
-        <Sidebar collapsed={sidebarCollapsed} pendingChanges={pendingChanges} lastSync={lastSync} />
-        <main className="app-main">
-          <TabBar active={tab} onChange={setTab} />
-          <div className="tab-panel">{panel}</div>
-        </main>
+        {isNarrow ? (
+          <>
+            {!sidebarCollapsed && (
+              <div className="sidebar-backdrop" onClick={() => setSidebarCollapsed(true)} />
+            )}
+            <Sidebar collapsed={sidebarCollapsed} pendingChanges={pendingChanges} lastSync={lastSync} />
+            {mainContent}
+          </>
+        ) : (
+          <PanelGroup direction="horizontal" autoSaveId="mccs.shell.split">
+            <Panel
+              ref={sidebarPanelRef}
+              id="sidebar"
+              order={1}
+              defaultSize={22}
+              minSize={14}
+              maxSize={42}
+              collapsible
+              collapsedSize={0}
+              onCollapse={() => setSidebarCollapsed(true)}
+              onExpand={() => setSidebarCollapsed(false)}
+              className="shell-panel-sidebar"
+            >
+              <Sidebar collapsed={sidebarCollapsed} pendingChanges={pendingChanges} lastSync={lastSync} />
+            </Panel>
+            <PanelResizeHandle className="resize-handle" aria-label="Resize sidebar" />
+            <Panel id="main" order={2} minSize={40} className="shell-panel-main">
+              {mainContent}
+            </Panel>
+          </PanelGroup>
+        )}
       </div>
       <BottomBar active={tab} onChange={setTab} pendingChanges={pendingChanges} />
     </div>

@@ -2,15 +2,17 @@ import { useState } from "react";
 import { TreeProtocol } from "./TreeProtocol";
 import { SoilProtocol } from "./SoilProtocol";
 import { BulkDensityProtocol } from "./BulkDensityProtocol";
+import { GearChecklist } from "./GearChecklist";
 import { usePlan } from "../../hooks/usePlan";
 import { planCounts } from "../../types/plan";
 
-type Sub = "trees" | "soil" | "bd";
+type Sub = "trees" | "soil" | "bd" | "checklist";
 
 const SUBS: { key: Sub; label: string }[] = [
-  { key: "trees", label: "Trees" },
-  { key: "soil",  label: "Soil" },
-  { key: "bd",    label: "BD" },
+  { key: "trees",     label: "Trees" },
+  { key: "soil",      label: "Soil" },
+  { key: "bd",        label: "BD" },
+  { key: "checklist", label: "Checklist" },
 ];
 
 export function ProtocolTab() {
@@ -34,9 +36,10 @@ export function ProtocolTab() {
         ))}
       </nav>
 
-      {sub === "trees" && <TreeProtocol  plan={plan} counts={counts} />}
-      {sub === "soil"  && <SoilProtocol  plan={plan} counts={counts} />}
-      {sub === "bd"    && <BulkDensityProtocol plan={plan} counts={counts} />}
+      {sub === "trees"     && <TreeProtocol  plan={plan} counts={counts} />}
+      {sub === "soil"      && <SoilProtocol  plan={plan} counts={counts} />}
+      {sub === "bd"        && <BulkDensityProtocol plan={plan} counts={counts} />}
+      {sub === "checklist" && <GearChecklist plan={plan} />}
     </div>
   );
 }

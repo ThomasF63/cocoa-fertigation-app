@@ -1,12 +1,22 @@
-import { DEFAULT_PLAN, maxBdBlocks, type SamplingPlan } from "../types/plan";
+import {
+  DEFAULT_LAB_ANALYSES,
+  DEFAULT_PLAN,
+  maxBdBlocks,
+  type LabAnalysisState,
+  type SamplingPlan,
+} from "../types/plan";
 
 const KEY = "mccs_sampling_plan_v1";
 
 // Legacy shapes:
 //   - `nBdRings`   : earliest field name (pre-rename to nBdPoints)
 //   - `nBdPoints`  : previous field (number of plots sampled, 0..plots)
-// Both are mapped to `nBdBlocks` (whole blocks, 0..nBlocks).
-type LegacyPlan = Partial<SamplingPlan> & { nBdRings?: number; nBdPoints?: number };
+//   - `labAnalyses.cn` : combined SOC+TN line, now split into `soc` + `tn`
+type LegacyPlan = Partial<SamplingPlan> & {
+  nBdRings?: number;
+  nBdPoints?: number;
+  labAnalyses?: Record<string, LabAnalysisState>;
+};
 
 export function loadPlan(): SamplingPlan {
   try {
@@ -17,7 +27,21 @@ export function loadPlan(): SamplingPlan {
     const merged: SamplingPlan = {
       ...DEFAULT_PLAN,
       ...rest,
+      labAnalyses: { ...DEFAULT_LAB_ANALYSES, ...(rest.labAnalyses as Record<string, LabAnalysisState> | undefined) } as SamplingPlan["labAnalyses"],
+      customLabAnalyses: Array.isArray(rest.customLabAnalyses) ? rest.customLabAnalyses : [],
     };
+
+    // Migrate legacy `cn` (combined SOC + TN) → split `soc` + `tn` 50/50.
+    const legacyLab: Record<string, LabAnalysisState> = rest.labAnalyses ?? {};
+    const cn = legacyLab.cn;
+    if (cn && legacyLab.soc == null && legacyLab.tn == null) {
+      const halfLow = Math.round(cn.costLowUsd / 2);
+      const halfHigh = Math.round(cn.costHighUsd / 2);
+      merged.labAnalyses.soc = { enabled: cn.enabled, costLowUsd: halfLow, costHighUsd: halfHigh };
+      merged.labAnalyses.tn  = { enabled: cn.enabled, costLowUsd: cn.costLowUsd - halfLow, costHighUsd: cn.costHighUsd - halfHigh };
+    }
+    delete (merged.labAnalyses as Record<string, LabAnalysisState>).cn;
+
     if (rest.nBdBlocks == null) {
       const legacyPoints = nBdPoints ?? nBdRings;
       if (legacyPoints != null) {

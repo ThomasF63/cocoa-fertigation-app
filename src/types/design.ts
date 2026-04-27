@@ -41,7 +41,7 @@ export interface Plot {
   n_dose_kg_ha_yr: number;
   rootstock: string;         // VB 1151
   trees_per_plot: number;    // 96
-  measurement_trees_n: number; // 12
+  measurement_trees_n: number; // 24
   plot_lat?: string;
   plot_lon?: string;
   notes?: string;

@@ -4,12 +4,15 @@ import type { SamplingPlan, PlanCounts } from "../../types/plan";
 interface Props { plan: SamplingPlan; counts: PlanCounts; }
 
 function TreeFigure() {
-  // Soil at y = 275. Heights above soil mapped at ~1.4 px per cm:
-  //   D5  -> y 268,  D30 -> y 233,  D50 -> y 205,  D130 -> y 93.
-  // Tree height arrow runs from soil to canopy top (y 50). Canopy widths shown
-  // in the inset to keep the trunk diagram legible.
+  // Layout:
+  //   viewBox 420 x 290. Soil at y=258. Canopy centred at (165,118).
+  //   Trunk runs to a Y-fork at y=206 (~40 cm above soil); two main
+  //   branches diverge to (118,80) and (212,80) with rounded caps.
+  //   D5 and D30 calipers sit on the single trunk below the fork.
+  //   D50 and D130 calipers appear on each branch above the fork.
+  //   Tree-height arrow on the far left; top-down canopy inset at (350,170).
   return (
-    <svg viewBox="0 0 360 320" role="img" aria-label="Tree size measurement diagram" className="protocol-svg">
+    <svg viewBox="0 0 420 290" role="img" aria-label="Tree size measurement diagram" className="protocol-svg">
       <defs>
         <linearGradient id="canopyGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%"   stopColor="var(--ek-stem)"      stopOpacity="0.55" />
@@ -18,80 +21,95 @@ function TreeFigure() {
       </defs>
 
       {/* Soil line */}
-      <line x1="10" y1="275" x2="350" y2="275" stroke="var(--ek-soil-mid)" strokeWidth="1.5" />
-      <line x1="10" y1="279" x2="350" y2="279" stroke="var(--ek-soil-mid)" strokeWidth="0.8" strokeDasharray="3 3" />
+      <line x1="10" y1="258" x2="410" y2="258" stroke="var(--ek-soil-mid)" strokeWidth="1.5" />
+      <line x1="10" y1="262" x2="410" y2="262" stroke="var(--ek-soil-mid)" strokeWidth="0.8" strokeDasharray="3 3" />
 
       {/* Canopy */}
-      <ellipse cx="180" cy="125" rx="105" ry="80" fill="url(#canopyGrad)" stroke="var(--ek-stem-dark)" strokeWidth="1" />
+      <ellipse cx="165" cy="118" rx="95" ry="72" fill="url(#canopyGrad)" stroke="var(--ek-stem-dark)" strokeWidth="1" />
 
-      {/* Trunk: tapers from base (D5 ~ 18 px wide) to upper crown (~ 8 px wide) */}
-      <path d="M171 275 L171 95 Q171 80 180 78 Q189 80 189 95 L189 275 Z"
+      {/* Trunk + two main branches forking at ~40 cm (y=206).
+          Single silhouette: up the left of the trunk, out to the left
+          branch top, rounded cap, down to the V-notch at (165,208), up to
+          the right branch top, rounded cap, down the right side of trunk. */}
+      <path d="M156 258 L156 206 L118 80 Q123 75 128 80 L165 208 L202 80 Q207 75 212 80 L174 206 L174 258 Z"
             fill="var(--ek-soil-warm)" stroke="var(--ek-soil-dark)" strokeWidth="1" />
 
-      {/* Diameter caliper marks at D5, D30, D50, D130 */}
-      <g stroke="var(--ek-terracotta)" strokeWidth="2" fontFamily="var(--font-mono)" fontSize="10" fill="var(--ek-terracotta)">
-        {/* D5 at 5 cm above soil */}
-        <line x1="155" y1="268" x2="205" y2="268" />
-        <line x1="155" y1="263" x2="155" y2="273" />
-        <line x1="205" y1="263" x2="205" y2="273" />
-        <text x="212" y="272" stroke="none">D5  (5 cm)</text>
-        {/* D30 */}
-        <line x1="155" y1="233" x2="205" y2="233" />
-        <line x1="155" y1="228" x2="155" y2="238" />
-        <line x1="205" y1="228" x2="205" y2="238" />
-        <text x="212" y="237" stroke="none">D30 (30 cm)</text>
-        {/* D50 */}
-        <line x1="155" y1="205" x2="205" y2="205" />
-        <line x1="155" y1="200" x2="155" y2="210" />
-        <line x1="205" y1="200" x2="205" y2="210" />
-        <text x="212" y="209" stroke="none">D50 (50 cm)</text>
-        {/* D130 (DBH) */}
-        <line x1="155" y1="93" x2="205" y2="93" />
-        <line x1="155" y1="88" x2="155" y2="98" />
-        <line x1="205" y1="88" x2="205" y2="98" />
-        <text x="212" y="97" stroke="none">D130 / DBH</text>
+      {/* Fork annotation */}
+      <g fontFamily="var(--font-mono)" fontSize="10" fill="var(--ek-soil-mid)">
+        <line x1="180" y1="208" x2="218" y2="208" stroke="var(--ek-soil-mid)" strokeWidth="0.6" strokeDasharray="2 2" />
+        <text x="222" y="211">fork ~40 cm</text>
       </g>
 
-      {/* Tree height arrow on the left */}
+      {/* Diameter caliper marks */}
+      <g stroke="var(--ek-terracotta)" strokeWidth="2" fontFamily="var(--font-mono)" fontSize="11" fill="var(--ek-terracotta)">
+        {/* D5 — single trunk, below fork */}
+        <line x1="141" y1="251" x2="189" y2="251" />
+        <line x1="141" y1="246" x2="141" y2="256" />
+        <line x1="189" y1="246" x2="189" y2="256" />
+        <text x="196" y="255" stroke="none">D5</text>
+
+        {/* D30 — single trunk, below fork */}
+        <line x1="141" y1="220" x2="189" y2="220" />
+        <line x1="141" y1="215" x2="141" y2="225" />
+        <line x1="189" y1="215" x2="189" y2="225" />
+        <text x="196" y="224" stroke="none">D30</text>
+
+        {/* D50 — one caliper per branch, just above the fork */}
+        <line x1="146" y1="193" x2="164" y2="193" />
+        <line x1="146" y1="188" x2="146" y2="198" />
+        <line x1="164" y1="188" x2="164" y2="198" />
+        <line x1="166" y1="193" x2="184" y2="193" />
+        <line x1="166" y1="188" x2="166" y2="198" />
+        <line x1="184" y1="188" x2="184" y2="198" />
+        <text x="191" y="197" stroke="none">D50</text>
+
+        {/* D130 (DBH) — one caliper per branch, high on the stem */}
+        <line x1="115" y1="90" x2="137" y2="90" />
+        <line x1="115" y1="85" x2="115" y2="95" />
+        <line x1="137" y1="85" x2="137" y2="95" />
+        <line x1="193" y1="90" x2="215" y2="90" />
+        <line x1="193" y1="85" x2="193" y2="95" />
+        <line x1="215" y1="85" x2="215" y2="95" />
+        <text x="221" y="94" stroke="none">D130 (DBH)</text>
+      </g>
+
+      {/* Tree height arrow — label above the canopy, outside it */}
       <g stroke="var(--ek-soil-dark)" strokeWidth="1.2" fill="var(--ek-soil-dark)">
-        <line x1="40" y1="275" x2="40" y2="50" />
-        <polygon points="36,58 44,58 40,50" />
-        <polygon points="36,267 44,267 40,275" />
-        <text x="48" y="165" fontSize="10" fontFamily="var(--font-mono)">tree height (m)</text>
+        <line x1="38" y1="258" x2="38" y2="42" />
+        <polygon points="34,50 42,50 38,42" />
+        <polygon points="34,250 42,250 38,258" />
+        <text x="22" y="32" fontSize="11" fontFamily="var(--font-mono)" stroke="none">tree height</text>
       </g>
 
-      {/* Canopy width inset (top-down view) */}
-      <g transform="translate(290,205)">
-        <rect x="-40" y="-40" width="80" height="80" fill="none" stroke="var(--ek-soil-mid)" strokeWidth="0.8" strokeDasharray="2 2" />
-        <ellipse cx="0" cy="0" rx="32" ry="22" fill="url(#canopyGrad)" stroke="var(--ek-stem-dark)" strokeWidth="0.8" />
-        {/* row direction guide */}
-        <line x1="-44" y1="0" x2="44" y2="0" stroke="var(--ek-soil-mid)" strokeWidth="0.6" />
-        {/* along-row arrow (horizontal) */}
+      {/* Canopy width inset (top-down view), pushed right to clear D-labels */}
+      <g transform="translate(350,170)">
+        <ellipse cx="0" cy="0" rx="38" ry="26" fill="url(#canopyGrad)" stroke="var(--ek-stem-dark)" strokeWidth="0.8" />
         <g stroke="var(--ek-terracotta)" strokeWidth="1.5" fill="var(--ek-terracotta)">
-          <line x1="-32" y1="0" x2="32" y2="0" />
-          <polygon points="-30,-3 -30,3 -36,0" />
-          <polygon points="30,-3 30,3 36,0" />
+          <line x1="-38" y1="0" x2="38" y2="0" />
+          <polygon points="-34,-3 -34,3 -40,0" />
+          <polygon points="34,-3 34,3 40,0" />
         </g>
-        {/* across-row arrow (vertical) */}
         <g stroke="var(--ek-stem-dark)" strokeWidth="1.5" fill="var(--ek-stem-dark)">
-          <line x1="0" y1="-22" x2="0" y2="22" />
-          <polygon points="-3,-20 3,-20 0,-26" />
-          <polygon points="-3,20 3,20 0,26" />
+          <line x1="0" y1="-26" x2="0" y2="26" />
+          <polygon points="-3,-22 3,-22 0,-28" />
+          <polygon points="-3,22 3,22 0,28" />
         </g>
-        <text x="0" y="-32" textAnchor="middle" fontSize="9" fontFamily="var(--font-mono)" fill="var(--ek-soil)">canopy (top-down)</text>
-        <text x="0" y="44" textAnchor="middle" fontSize="9" fontFamily="var(--font-mono)" fill="var(--ek-terracotta)">along row</text>
-        <text x="-46" y="3" textAnchor="end" fontSize="9" fontFamily="var(--font-mono)" fill="var(--ek-stem-dark)">across</text>
-      </g>
-
-      {/* Legend */}
-      <g transform="translate(14,18)">
-        <line x1="0" y1="6" x2="12" y2="6" stroke="var(--ek-terracotta)" strokeWidth="2" />
-        <text x="18" y="10" fontSize="10" fill="var(--ek-soil)" fontFamily="var(--font-mono)">Caliper diameter</text>
-        <line x1="0" y1="22" x2="12" y2="22" stroke="var(--ek-soil-dark)" strokeWidth="1.5" />
-        <text x="18" y="26" fontSize="10" fill="var(--ek-soil)" fontFamily="var(--font-mono)">Vertical / across-row</text>
+        <text x="0" y="-36" textAnchor="middle" fontSize="10" fontFamily="var(--font-mono)" fill="var(--ek-soil)">top-down view</text>
+        <text x="0" y="48" textAnchor="middle" fontSize="10" fontFamily="var(--font-mono)" fill="var(--ek-terracotta)">along row</text>
+        <text x="-44" y="3" textAnchor="end" fontSize="10" fontFamily="var(--font-mono)" fill="var(--ek-stem-dark)">across</text>
       </g>
     </svg>
   );
+}
+
+export function treeGear(_plan: SamplingPlan): string[] {
+  return [
+    "Digital caliper (0.1 mm) for trunk diameters",
+    "Telescopic measuring rod or clinometer / hypsometer for tree height",
+    "Tape measure (≥ 5 m) for canopy widths",
+    "Marking chalk or tape at 5, 30, 50, 130 cm stem height",
+    "Tablet running this app (offline mode)",
+  ];
 }
 
 export function TreeProtocol({ plan, counts }: Props) {
@@ -111,13 +129,7 @@ export function TreeProtocol({ plan, counts }: Props) {
         { label: "Diameter heights per tree", value: 4, hint: "5, 30, 50, 130 cm" },
         { label: "Canopy widths per tree", value: 2, hint: "along and across the row" },
       ]}
-      gear={[
-        "Digital caliper (0.1 mm) for trunk diameters",
-        "Telescopic measuring rod or clinometer / hypsometer for tree height",
-        "Tape measure (>= 5 m) for canopy widths",
-        "Marking chalk or tape at 5, 30, 50, 130 cm stem height",
-        "Tablet running this app (offline mode)",
-      ]}
+      gear={treeGear(plan)}
       steps={[
         { label: `Locate the ${treesPerPlot} central trees`, detail: "Use the Layout tab to confirm tree IDs and walking order within the plot." },
         { label: "Mark heights on the trunk", detail: "From soil surface (root collar), mark 5, 30, 50, 130 cm on the trunk. Use a chalk band if heights are reused on subsequent visits." },
@@ -135,7 +147,7 @@ export function TreeProtocol({ plan, counts }: Props) {
         "Flag any tree with major pruning, breakage, or recent training in notes.",
       ]}
       figure={<TreeFigure />}
-      figureCaption="Trunk diameter heights (D5 / D30 / D50 / D130), total tree height, and canopy width measured along and across the planting row."
+      figureCaption="D5 and D30 on the single trunk below the fork (~40 cm); D50 and D130 (DBH) on each main branch above the fork. Tree height runs from soil to canopy top; canopy width is measured along and across the planting row."
     />
   );
 }

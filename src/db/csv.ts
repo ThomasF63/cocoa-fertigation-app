@@ -91,7 +91,7 @@ function rowToPlot(r: Record<string, string>): Plot {
     n_dose_kg_ha_yr: Number(r.n_dose_kg_ha_yr),
     rootstock: r.rootstock || "VB 1151",
     trees_per_plot: Number(r.trees_per_plot) || 96,
-    measurement_trees_n: Number(r.measurement_trees_n) || 12,
+    measurement_trees_n: Number(r.measurement_trees_n) || 24,
     plot_lat: strOrUndef(r.plot_lat),
     plot_lon: strOrUndef(r.plot_lon),
     notes: strOrUndef(r.notes),

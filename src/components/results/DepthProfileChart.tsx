@@ -21,20 +21,23 @@ const DOSE_ORDER: ReadonlyArray<"L" | "M" | "H"> = ["L", "M", "H"];
 
 // Horizon bands — the samples themselves. Order = surface → subsoil.
 // Alternating tints borrow the existing --ek-depth-* palette.
+// Bands are derived from the depth labels actually present in the data so the
+// chart adapts to any selectable scheme (1–4 layers, any intervals). Labels
+// follow "top-bottom" in cm, matching DEPTH_SCHEMES in types/plan.ts.
 interface HorizonBand {
   label: string;
   top: number;
   bottom: number;
   mid: number;
 }
-const HORIZON_BANDS: HorizonBand[] = [
-  { label: "0-10",  top:  0, bottom: 10, mid:  5 },
-  { label: "10-20", top: 10, bottom: 20, mid: 15 },
-  { label: "20-30", top: 20, bottom: 30, mid: 25 },
-  { label: "30-50", top: 30, bottom: 50, mid: 40 },
-];
-const HORIZON_BY_LABEL = new Map(HORIZON_BANDS.map(b => [b.label, b]));
-const Y_DOMAIN: [number, number] = [0, 50];
+function parseHorizonLabel(label: string): HorizonBand | null {
+  const m = /^(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)$/.exec(label);
+  if (!m) return null;
+  const top = Number(m[1]);
+  const bottom = Number(m[2]);
+  if (!Number.isFinite(top) || !Number.isFinite(bottom) || bottom <= top) return null;
+  return { label, top, bottom, mid: (top + bottom) / 2 };
+}
 
 // Focus key: "dose:L" | "geno:CCN 51" | null (no focus).
 type FocusKey = string | null;
@@ -67,17 +70,22 @@ export function DepthProfileChart({ obs, unit, label }: {
 
     const groups = groupBy(depthObs, o => `${o.genotype}|${o.dose_code}|${o.depth_label}`);
 
+    const bandByLabel = new Map<string, HorizonBand>();
     const byDepth = new Map<string, Row>();
     const seriesSet = new Set<string>();
     const doseSet = new Set<"L" | "M" | "H">();
     const genoSet = new Set<string>();
-    const bandSet = new Set<string>();
     for (const [k, arr] of groups) {
       const [gen, dose, depth] = k.split("|");
       const d = describe(arr.map(o => o.value));
       if (!d) continue;
-      const band = HORIZON_BY_LABEL.get(depth);
-      if (!band) continue;
+      let band = bandByLabel.get(depth);
+      if (!band) {
+        const parsed = parseHorizonLabel(depth);
+        if (!parsed) continue;
+        band = parsed;
+        bandByLabel.set(depth, band);
+      }
       const row = byDepth.get(depth) ?? { depth_mid_cm: band.mid, depth_label: depth };
       const key = `${gen} ${doseLabel(dose as "L" | "M" | "H")}`;
       row[`${key}_mean`] = d.mean;
@@ -85,7 +93,6 @@ export function DepthProfileChart({ obs, unit, label }: {
       seriesSet.add(key);
       doseSet.add(dose as "L" | "M" | "H");
       genoSet.add(gen);
-      bandSet.add(depth);
       byDepth.set(depth, row);
     }
 
@@ -109,7 +116,7 @@ export function DepthProfileChart({ obs, unit, label }: {
 
     const presentDoses = DOSE_ORDER.filter(d => doseSet.has(d));
     const presentGenotypes = Array.from(genoSet).sort();
-    const presentBands = HORIZON_BANDS.filter(b => bandSet.has(b.label));
+    const presentBands = Array.from(bandByLabel.values()).sort((a, b) => a.top - b.top);
 
     return { rows, series, seriesSpecs, presentDoses, presentGenotypes, presentBands };
   }, [obs]);
@@ -125,6 +132,7 @@ export function DepthProfileChart({ obs, unit, label }: {
 
   const bandTicks = presentBands.map(b => b.mid);
   const bandByMid = new Map(presentBands.map(b => [b.mid, b]));
+  const yDomain: [number, number] = [0, presentBands[presentBands.length - 1].bottom];
 
   return (
     <div className="depth-profile">
@@ -139,7 +147,7 @@ export function DepthProfileChart({ obs, unit, label }: {
           <ComposedChart
             data={rows}
             layout="vertical"
-            margin={{ top: 10, right: 24, left: 14, bottom: 38 }}
+            margin={{ top: 38, right: 24, left: 14, bottom: 10 }}
           >
             {/* Horizon-band strips: the actual sampled intervals.
                 Alternating tints give the plot area the cadence of a soil
@@ -165,9 +173,8 @@ export function DepthProfileChart({ obs, unit, label }: {
             <YAxis
               type="number"
               dataKey="depth_mid_cm"
-              domain={Y_DOMAIN}
+              domain={yDomain}
               ticks={bandTicks}
-              reversed
               axisLine={{ stroke: "var(--panel-border-strong)" }}
               tickLine={{ stroke: "var(--panel-border-strong)" }}
               tickFormatter={(v) => bandByMid.get(v)?.label ?? String(v)}
@@ -189,6 +196,7 @@ export function DepthProfileChart({ obs, unit, label }: {
             />
             <XAxis
               type="number"
+              orientation="top"
               domain={["auto", "auto"]}
               axisLine={{ stroke: "var(--panel-border-strong)" }}
               tickLine={{ stroke: "var(--panel-border-strong)" }}
@@ -196,7 +204,7 @@ export function DepthProfileChart({ obs, unit, label }: {
               tickMargin={6}
               label={{
                 value: unit ? `${label}  (${unit})` : label,
-                position: "bottom",
+                position: "top",
                 offset: 16,
                 style: {
                   fontFamily: CHART_FONT_UI,

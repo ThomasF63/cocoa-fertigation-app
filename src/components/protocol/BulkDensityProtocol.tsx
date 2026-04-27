@@ -67,6 +67,17 @@ function BDFigure({ layers }: { layers: DepthLayer[] }) {
   );
 }
 
+export function bdGear(plan: SamplingPlan): string[] {
+  const nLayers = plan.bdRingDepths.length;
+  return [
+    `Steel BD rings of known volume (e.g. 100 cm³), ${Math.max(nLayers, 1)} per pit`,
+    "Ring driver / mallet and straight blade for trimming",
+    "Shovel for opening a clean vertical pit face",
+    "Pre-labelled aluminium tins or sealed bags",
+    "Field balance (0.01 g) for fresh weight, oven (105 °C) for dry weight",
+  ];
+}
+
 export function BulkDensityProtocol({ plan, counts }: Props) {
   const { bdRingDepths } = plan;
   const { bd_points, bd_rings } = counts;
@@ -90,13 +101,7 @@ export function BulkDensityProtocol({ plan, counts }: Props) {
         { label: "Total rings", value: bd_rings },
         { label: "Rings per pit", value: nLayers },
       ]}
-      gear={[
-        `Steel BD rings of known volume (e.g. 100 cm³), ${Math.max(nLayers, 1)} per pit`,
-        "Ring driver / mallet and straight blade for trimming",
-        "Shovel for opening a clean vertical pit face",
-        "Pre-labelled aluminium tins or sealed bags",
-        "Field balance (0.01 g) for fresh weight, oven (105 °C) for dry weight",
-      ]}
+      gear={bdGear(plan)}
       steps={[
         { label: `Open a clean vertical pit to ≥ ${nLayers ? bdRingDepths[nLayers - 1].bottom + 5 : 55} cm`, detail: "One pit per selected BD point, outside the tree dripline, wheel tracks, and irrigation lines." },
         { label: "Trim the pit face smooth at each depth", detail: nLayers > 0 ? `Make a level shelf at the centre of each layer: ${bdRingDepths.map(l => `${(l.top + l.bottom) / 2} cm`).join(", ")}.` : "No layers configured." },

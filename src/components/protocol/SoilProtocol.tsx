@@ -118,6 +118,17 @@ function SoilFigure({ layers, nSubsamples }: { layers: DepthLayer[]; nSubsamples
   );
 }
 
+export function soilGear(plan: SamplingPlan): string[] {
+  const nLayers = plan.depths.length;
+  return [
+    "Dutch auger (ø 5 cm) or split-tube sampler",
+    "Depth-marked ruler and sharp knife or spatula",
+    `${nLayers || 0} labelled bucket${nLayers === 1 ? "" : "s"} per plot (one per depth layer)`,
+    "Ziplock bags (2 L) and permanent marker",
+    "GPS or plot flags to confirm location",
+  ];
+}
+
 export function SoilProtocol({ plan, counts }: Props) {
   const { depths, nSubsamplesPerPlot } = plan;
   const { plots, soil_samples, soil_subsamples } = counts;
@@ -141,13 +152,7 @@ export function SoilProtocol({ plan, counts }: Props) {
         { label: "Composite samples (lab)", value: soil_samples },
         { label: "Field subsamples (total)", value: soil_subsamples },
       ]}
-      gear={[
-        "Dutch auger (ø 5 cm) or split-tube sampler",
-        "Depth-marked ruler and sharp knife or spatula",
-        `${nLayers || 0} labelled bucket${nLayers === 1 ? "" : "s"} per plot (one per depth layer)`,
-        "Ziplock bags (2 L) and permanent marker",
-        "GPS or plot flags to confirm location",
-      ]}
+      gear={soilGear(plan)}
       steps={[
         { label: `Walk the compositing pattern inside the plot`, detail: `${nSubsamplesPerPlot} subsample point${nSubsamplesPerPlot === 1 ? "" : "s"} spaced across the plot, at least 1 m from trunks and ≥ 2 m from the plot edge. Pattern (W, X, zigzag, grid, random) is recorded per sample in the Data entry tab.` },
         { label: `Auger a full 0 to ${nLayers ? depths[nLayers - 1].bottom : 50} cm core at each point`, detail: "Keep the core intact on a clean sheet; scrape surface litter aside but do not discard it into the sample." },

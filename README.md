@@ -24,7 +24,7 @@ npm run preview
 
 ## Data model
 
-Schemas are one-to-one with the CSVs in `../data/` (see `data/README.md`).
+Schemas are one-to-one with the CSVs in `../04_data/` (see `../04_data/README.md`).
 IDs follow the same convention:
 
 - `plot_id` = `B{1..8}_{CCN51|PS1319}_{L|M|H}`

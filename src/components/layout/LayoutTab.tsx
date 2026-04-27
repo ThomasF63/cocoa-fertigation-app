@@ -6,15 +6,22 @@ import type { Plot } from "../../types/design";
 import { usePlan } from "../../hooks/usePlan";
 import type { SamplingPlan } from "../../types/plan";
 import {
-  GENOTYPE_FILL,
-  GENOTYPE_STROKE,
-  DOSE_STROKE_WIDTH,
   DOSE_LABEL,
+  GENOTYPE_STROKE,
   TOKENS,
 } from "../../utils/palette";
 import {
   SoilMark, BdMark, NminMark, TreeMark, SAMPLE_SOIL_COLOR,
 } from "../shared/SampleShapes";
+import {
+  DoseSwatch,
+  GenotypeSwatch,
+  PlotEncodingDefs,
+  PlotTileRects,
+  resolvePlotEncoding,
+} from "../shared/PlotEncoding";
+import { useEncodingMode } from "../../hooks/useEncodingMode";
+import { EncodingStyleToggle } from "../shared/EncodingStyleToggle";
 
 const CHART_FONT_MONO = "'Azeret Mono', ui-monospace, Menlo, Consolas, monospace";
 
@@ -27,12 +34,10 @@ type ViewMode = "trees" | "sampling";
 //   Nmin → plus          (bottom row)
 const IND_BD = TOKENS.slate;
 
-// Internal layout within each full-size plot (plotW = 120, plotH = 240).
-// Soil/BD marker stacks sit just below the plot label on the left/right
-// margins, outside the 6×2 tree grid. N-min marker sits above the
-// plot's bottom edge.
-const LAYOUT_STACK_AREA_TOP = 44;
-const LAYOUT_STACK_AREA_H = 42;
+// Internal layout within each full-size plot (plotW = 120, plotH = 300).
+// Soil/BD/Nmin markers sit on a shared baseline at the bottom of each plot,
+// padded off the bottom edge. Soil stacks upward on the left; BD stacks
+// upward on the right; Nmin sits at the bottom centre.
 const LAYOUT_BOTTOM_MARGIN = 10;
 const LAYOUT_SIDE_INSET = 10;
 const LAYOUT_MARKER_R = 5;
@@ -43,16 +48,18 @@ const LAYOUT_BOTTOM_SPACING = 16;
 function PlotSampleMarkers({
   x, y, w, h, plan, bdActive,
 }: {
+  /** Inner-rect bounds — markers bottom-align inside the framed fill, not the
+   *  outer plot edge, so they never spill into the border gap. */
   x: number; y: number; w: number; h: number;
   plan: SamplingPlan; bdActive: boolean;
 }) {
   const nSoil = plan.depths.length;
   const nBd = plan.bdRingDepths.length;
-  const soilStackH = Math.max(0, nSoil - 1) * LAYOUT_MARKER_GAP;
-  const bdStackH = Math.max(0, nBd - 1) * LAYOUT_MARKER_GAP;
-  const soilStartY = y + LAYOUT_STACK_AREA_TOP + (LAYOUT_STACK_AREA_H - soilStackH) / 2;
-  const bdStartY = y + LAYOUT_STACK_AREA_TOP + (LAYOUT_STACK_AREA_H - bdStackH) / 2;
+  // Shared bottom baseline inside the inner rect, with padding from the inner
+  // bottom edge.
   const bottomCy = y + h - LAYOUT_BOTTOM_MARGIN;
+  const soilStartY = bottomCy - (nSoil - 1) * LAYOUT_MARKER_GAP;
+  const bdStartY = bottomCy - (nBd - 1) * LAYOUT_MARKER_GAP;
 
   const bottomMarks: "nmin"[] = [];
   if (plan.includeNmin) bottomMarks.push("nmin");
@@ -106,6 +113,7 @@ export function LayoutTab() {
     { plot: PlotLayoutCell; x: number; y: number } | null
   >(null);
   const { plan } = usePlan();
+  const { mode: encodingMode } = useEncodingMode();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -430,64 +438,67 @@ export function LayoutTab() {
           </div>
         </div>
 
-        {/* Legend (above viewer) */}
-        {viewMode === "trees" && (
-          <div className="row muted" style={{ marginBottom: 10, gap: 16, flexWrap: "wrap" }}>
-            <span className="badge stem">CCN 51</span>
-            <span className="badge berry">PS 13.19</span>
-            <span className="row" style={{ gap: 6 }}><svg width="20" height="12"><rect x="1" y="1" width="18" height="10" fill="none" stroke={TOKENS.soil} strokeWidth="0.8"/></svg> 56 kg N</span>
-            <span className="row" style={{ gap: 6 }}><svg width="20" height="12"><rect x="1" y="1" width="18" height="10" fill="none" stroke={TOKENS.soil} strokeWidth="1.6"/></svg> 226</span>
-            <span className="row" style={{ gap: 6 }}><svg width="20" height="12"><rect x="1" y="1" width="18" height="10" fill="none" stroke={TOKENS.soil} strokeWidth="2.6"/></svg> 340</span>
-          </div>
-        )}
-        {viewMode === "sampling" && (
-          <div className="row muted" style={{ marginBottom: 10, gap: 14, flexWrap: "wrap" }}>
-            {plan.depths.length > 0 && (
-              <span className="row" style={{ gap: 5, fontSize: "0.72rem" }}>
-                <svg width={14} height={Math.max(14, plan.depths.length * LAYOUT_MARKER_GAP + 4)}>
-                  {Array.from({ length: plan.depths.length }).map((_, di) => (
-                    <SoilMark key={di} cx={7}
-                      cy={LAYOUT_MARKER_R + 1 + di * LAYOUT_MARKER_GAP}
-                      r={LAYOUT_MARKER_R - 1} color={SAMPLE_SOIL_COLOR} />
-                  ))}
-                </svg>
-                Soil sample ({plan.depths.length}/plot)
+        {/* Legend (above viewer) — mirrors the current encoding mode */}
+        <div className="row muted" style={{ marginBottom: 10, gap: 14, flexWrap: "wrap", alignItems: "center" }}>
+          {/* Dose → orange fill ramp (L → M → H) */}
+          <span className="row" style={{ gap: 5, fontSize: "0.72rem" }}>
+            <DoseSwatch dose="L" /> 56 kg N
+          </span>
+          <span className="row" style={{ gap: 5, fontSize: "0.72rem" }}>
+            <DoseSwatch dose="M" /> 226
+          </span>
+          <span className="row" style={{ gap: 5, fontSize: "0.72rem" }}>
+            <DoseSwatch dose="H" /> 340
+          </span>
+          <span style={{ width: 1, alignSelf: "stretch", background: "var(--panel-border)" }} />
+          {/* Genotype → mode-dependent second channel */}
+          <span className="row" style={{ gap: 5, fontSize: "0.72rem" }}>
+            <GenotypeSwatch mode={encodingMode} geno="CCN51" idScope="legend-layout" /> CCN 51
+          </span>
+          <span className="row" style={{ gap: 5, fontSize: "0.72rem" }}>
+            <GenotypeSwatch mode={encodingMode} geno="PS1319" idScope="legend-layout" /> PS 13.19
+          </span>
+
+          {viewMode === "sampling" && (
+            <>
+              <span style={{ width: 1, alignSelf: "stretch", background: "var(--panel-border)" }} />
+              {plan.depths.length > 0 && (
+                <span className="row" style={{ gap: 5, fontSize: "0.72rem" }}>
+                  <svg width={14} height={Math.max(14, plan.depths.length * LAYOUT_MARKER_GAP + 4)}>
+                    {Array.from({ length: plan.depths.length }).map((_, di) => (
+                      <SoilMark key={di} cx={7}
+                        cy={LAYOUT_MARKER_R + 1 + di * LAYOUT_MARKER_GAP}
+                        r={LAYOUT_MARKER_R - 1} color={SAMPLE_SOIL_COLOR} />
+                    ))}
+                  </svg>
+                  Soil sample ({plan.depths.length}/plot)
+                </span>
+              )}
+              {plan.nBdBlocks > 0 && plan.bdRingDepths.length > 0 && (
+                <span className="row" style={{ gap: 5, fontSize: "0.72rem" }}>
+                  <svg width={14} height={Math.max(14, plan.bdRingDepths.length * LAYOUT_MARKER_GAP + 4)}>
+                    {Array.from({ length: plan.bdRingDepths.length }).map((_, di) => (
+                      <BdMark key={di} cx={7}
+                        cy={LAYOUT_MARKER_R + 1 + di * LAYOUT_MARKER_GAP}
+                        r={LAYOUT_MARKER_R - 1} strokeWidth={1.4} />
+                    ))}
+                  </svg>
+                  BD core ({plan.bdRingDepths.length}/plot × {plan.nBdBlocks} block{plan.nBdBlocks !== 1 ? "s" : ""})
+                </span>
+              )}
+              {plan.includeNmin && (
+                <span className="row" style={{ gap: 5, fontSize: "0.72rem" }}>
+                  <svg width={12} height={12}><NminMark cx={6} cy={6} r={LAYOUT_BOTTOM_R} strokeWidth={1.6} /></svg>
+                  N-min analysis
+                </span>
+              )}
+              <span className="row" style={{ gap: 5, fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                <svg width="12" height="10"><rect x="0" y="0" width="12" height="10" rx="1" fill="var(--soil-08)" opacity="0.4"/></svg>
+                Excluded by plan
               </span>
-            )}
-            {plan.nBdBlocks > 0 && plan.bdRingDepths.length > 0 && (
-              <span className="row" style={{ gap: 5, fontSize: "0.72rem" }}>
-                <svg width={14} height={Math.max(14, plan.bdRingDepths.length * LAYOUT_MARKER_GAP + 4)}>
-                  {Array.from({ length: plan.bdRingDepths.length }).map((_, di) => (
-                    <BdMark key={di} cx={7}
-                      cy={LAYOUT_MARKER_R + 1 + di * LAYOUT_MARKER_GAP}
-                      r={LAYOUT_MARKER_R - 1} strokeWidth={1.4} />
-                  ))}
-                </svg>
-                BD core ({plan.bdRingDepths.length}/plot × {plan.nBdBlocks} block{plan.nBdBlocks !== 1 ? "s" : ""})
-              </span>
-            )}
-            {plan.includeNmin && (
-              <span className="row" style={{ gap: 5, fontSize: "0.72rem" }}>
-                <svg width={12} height={12}><NminMark cx={6} cy={6} r={LAYOUT_BOTTOM_R} strokeWidth={1.6} /></svg>
-                N-min analysis
-              </span>
-            )}
-            {/* Dose → border thickness */}
-            <span className="row" style={{ gap: 6, fontSize: "0.72rem" }}>
-              <svg width="20" height="12"><rect x="1" y="1" width="18" height="10" fill="none" stroke={TOKENS.soil} strokeWidth="0.8"/></svg> 56 kg N
-            </span>
-            <span className="row" style={{ gap: 6, fontSize: "0.72rem" }}>
-              <svg width="20" height="12"><rect x="1" y="1" width="18" height="10" fill="none" stroke={TOKENS.soil} strokeWidth="1.6"/></svg> 226
-            </span>
-            <span className="row" style={{ gap: 6, fontSize: "0.72rem" }}>
-              <svg width="20" height="12"><rect x="1" y="1" width="18" height="10" fill="none" stroke={TOKENS.soil} strokeWidth="2.6"/></svg> 340
-            </span>
-            <span className="row" style={{ gap: 5, fontSize: "0.72rem", color: "var(--text-muted)" }}>
-              <svg width="12" height="10"><rect x="0" y="0" width="12" height="10" rx="1" fill="var(--soil-08)" opacity="0.4"/></svg>
-              Excluded by plan
-            </span>
-          </div>
-        )}
+            </>
+          )}
+        </div>
 
         <div
           ref={containerRef}
@@ -550,6 +561,20 @@ export function LayoutTab() {
                 </button>
               );
             })}
+          </div>
+
+          {/* Encoding style (top-left, below the tool toggle) */}
+          <div
+            style={{
+              position: "absolute",
+              top: 54,
+              left: 12,
+              zIndex: 2,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+              borderRadius: "var(--radius-control)",
+            }}
+          >
+            <EncodingStyleToggle />
           </div>
 
           {/* Zoom cluster (top-right) */}
@@ -668,6 +693,7 @@ export function LayoutTab() {
             onPointerLeave={clearTooltip}
             onContextMenu={(e) => e.preventDefault()}
           >
+            <PlotEncodingDefs idScope="layout" scale={12} />
             <g transform={`translate(${pan.x} ${pan.y}) scale(${scale})`}>
             {/* Block enclosures — match the Design overview style: a thin
                 outline grouping the 6 plots (2 genotypes × 3 doses) that
@@ -704,14 +730,16 @@ export function LayoutTab() {
             {layout.plots.map((cell) => {
               const active = isActive(cell);
               const isSel = cell.plot_id === selected;
-              const fill = active
-                ? GENOTYPE_FILL[cell.genotype]
-                : "var(--soil-08)";
-              const stroke = isSel
-                ? TOKENS.soilDark
-                : active
-                  ? GENOTYPE_STROKE[cell.genotype]
-                  : "var(--panel-border)";
+              const spec = resolvePlotEncoding({
+                mode: encodingMode,
+                geno: cell.genotype,
+                dose: cell.dose_code,
+                active,
+                selected: isSel,
+                x: cell.x, y: cell.y, w: cell.w, h: cell.h,
+                idScope: "layout",
+                scale: 3,
+              });
 
               return (
                 <g
@@ -720,12 +748,14 @@ export function LayoutTab() {
                   onPointerMove={(e) => updateTooltip(cell, e)}
                   onPointerLeave={clearTooltip}
                 >
+                  {/* Interactive outer rect — receives clicks/tooltips on the
+                      whole plot footprint (including the gap). Fill is
+                      invisible so the frame + inner rect carry the visuals. */}
                   <rect
                     x={cell.x} y={cell.y} width={cell.w} height={cell.h}
-                    rx={4} fill={fill}
-                    stroke={stroke}
-                    strokeWidth={isSel ? 3 : DOSE_STROKE_WIDTH[cell.dose_code]}
-                    opacity={active ? 1 : 0.4}
+                    rx={4}
+                    fill="transparent"
+                    stroke="none"
                     style={{ cursor: plotCursor }}
                     onClick={(e) => handlePlotClick(cell, e)}
                   >
@@ -733,11 +763,20 @@ export function LayoutTab() {
                       {cell.plot_id} ({cell.genotype === "CCN51" ? "CCN 51" : "PS 13.19"}, {DOSE_LABEL[cell.dose_code]} kg N ha⁻¹ yr⁻¹)
                     </title>
                   </rect>
+                  <PlotTileRects
+                    spec={spec}
+                    x={cell.x} y={cell.y} w={cell.w} h={cell.h}
+                    rx={4}
+                    opacity={active ? 1 : 0.4}
+                  />
+                  {active && spec.overlay}
 
-                  {/* Label: block + genotype only. N dose is shown by the
-                      rectangle border thickness (same convention used in
-                      the legend above). */}
-                  <text x={cell.x + 8} y={cell.y + 18}
+                  {/* Label: block + genotype only. N dose is carried by the
+                      rectangle fill colour (see the legend above). Shifted
+                      right in corner-chip mode so the label clears the chip. */}
+                  <text
+                    x={cell.x + (encodingMode === "corner-chip" || encodingMode === "chip-border" ? 30 : 8)}
+                    y={cell.y + (encodingMode === "top-band" ? 32 : 18)}
                     fontFamily={CHART_FONT_MONO} fontSize="13"
                     fontWeight={600}
                     letterSpacing="0.02em"
@@ -757,10 +796,12 @@ export function LayoutTab() {
                     </g>
                   ))}
 
-                  {/* Sampling view */}
+                  {/* Sampling view — markers are placed inside the inner
+                      (framed) rect so they can't spill into the border gap. */}
                   {viewMode === "sampling" && active && (
                     <PlotSampleMarkers
-                      x={cell.x} y={cell.y} w={cell.w} h={cell.h}
+                      x={spec.innerX} y={spec.innerY}
+                      w={spec.innerW} h={spec.innerH}
                       plan={plan}
                       bdActive={cell.block <= plan.nBdBlocks && plan.bdRingDepths.length > 0}
                     />
@@ -832,13 +873,14 @@ export function LayoutTab() {
                 <div>{geno}</div>
                 <div>{DOSE_LABEL[tooltip.plot.dose_code]} kg N ha⁻¹ yr⁻¹</div>
                 <div style={{ color: "var(--text-secondary)" }}>
-                  12 central trees · 6×2 double row
+                  24 central trees · 12×2 double row
                 </div>
               </div>
             );
           })()}
         </div>
       </div>
+
 
       {/* Plot inspector */}
       <div className="card">
