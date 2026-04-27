@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="MCCS cocoa fertigation app">
+  <rect width="512" height="512" rx="96" fill="#3B322C"/>
+  <ellipse cx="256" cy="280" rx="112" ry="160" fill="#E89B48"/>
+  <path d="M256 120 C 320 120, 368 184, 368 280 C 368 376, 320 440, 256 440 C 192 440, 144 376, 144 280 C 144 184, 192 120, 256 120 Z"
+        fill="none" stroke="#C46B42" stroke-width="16"/>
+  <line x1="256" y1="140" x2="256" y2="420" stroke="#7A3C22" stroke-width="10" opacity="0.5"/>
+  <circle cx="256" cy="80" r="22" fill="#657D58"/>
+  <path d="M232 80 Q 190 52, 150 80" fill="none" stroke="#657D58" stroke-width="12" stroke-linecap="round"/>
+  <text x="256" y="476" text-anchor="middle" font-family="PT Mono, monospace" font-size="56" font-weight="700" fill="#F7F5F0" letter-spacing="4">MCCS</text>
+</svg>
