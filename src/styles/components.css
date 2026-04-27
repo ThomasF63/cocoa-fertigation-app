@@ -373,6 +373,39 @@
   outline: 2px solid var(--ek-water);
   outline-offset: -1px;
 }
+/* Wider touch target + grip dots for finger dragging */
+@media (pointer: coarse) {
+  .resize-handle[data-panel-group-direction="horizontal"] {
+    width: 24px;
+  }
+  .resize-handle[data-panel-group-direction="vertical"] {
+    height: 24px;
+  }
+  .resize-handle[data-panel-group-direction="horizontal"]::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 4px;
+    height: 32px;
+    background: radial-gradient(circle, var(--text-muted) 1.5px, transparent 1.5px);
+    background-size: 4px 8px;
+    background-repeat: repeat-y;
+  }
+  .resize-handle[data-panel-group-direction="vertical"]::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 4px;
+    background: radial-gradient(circle, var(--text-muted) 1.5px, transparent 1.5px);
+    background-size: 8px 4px;
+    background-repeat: repeat-x;
+  }
+}
 
 /* Keep sidebar Panel filling its container; internal scrolling stays inside. */
 .shell-panel-sidebar,
@@ -761,21 +794,21 @@ input[type="number"] {
 }
 .stat .stat-label {
   font-family: var(--font-family);
-  font-size: 0.68rem;
-  font-weight: 500;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--text-muted);
   letter-spacing: 0;
   text-transform: none;
 }
 .stat .stat-value {
   font-family: var(--font-mono);
-  font-size: 1.6rem;
+  font-size: 1.7rem;
   font-weight: 700;
   color: var(--text-primary);
 }
 .stat .stat-sub {
   font-family: var(--font-family);
-  font-size: 0.70rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
 }
 .stat .stat-bar {
@@ -798,6 +831,9 @@ input[type="number"] {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: var(--space-3);
+}
+.stat.stat-wide {
+  grid-column: span 2;
 }
 
 /* ===== BOTTOM TAB BAR (iPad / touch) ===== */

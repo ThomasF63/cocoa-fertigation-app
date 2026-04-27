@@ -1,12 +1,11 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { useMediaQuery, NARROW_OR_TOUCH_QUERY } from "../../hooks/useMediaQuery";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 
-// Horizontal two-pane split with a draggable handle. On wide screens it renders
-// a react-resizable-panels PanelGroup; position is persisted per autoSaveId.
-// On narrow / touch screens (where the sidebar is hidden and the tab content
-// tends to stack) it falls back to a flex-wrap row so the children flow onto
-// separate lines instead of being pinned side-by-side.
+// Horizontal two-pane split with a draggable handle. On phones (≤768 px) it
+// falls back to a flex-wrap stack. On wider screens — including touch tablets —
+// it renders a react-resizable-panels PanelGroup with a finger-friendly handle;
+// position is persisted per autoSaveId.
 export function ResizableRow({
   autoSaveId,
   left,
@@ -24,7 +23,7 @@ export function ResizableRow({
   flexBasis?: string;
   gap?: number;
 }) {
-  const isNarrow = useMediaQuery(NARROW_OR_TOUCH_QUERY);
+  const isNarrow = useMediaQuery("(max-width: 768px)");
   if (isNarrow) {
     return (
       <div className="row" style={{ gap, alignItems: "stretch", flexWrap: "wrap" }}>

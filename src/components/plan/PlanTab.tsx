@@ -287,7 +287,7 @@ export function PlanTab() {
               <span className="stat-value">{counts.nmin_measurements}</span>
               <span className="stat-sub">{plan.includeNmin ? "1 per plot, run on the 0–10 cm sample" : "excluded"}</span>
             </div>
-            <div className="stat">
+            <div className="stat stat-wide">
               <span className="stat-label">Lab cost (total)</span>
               <span className="stat-value">
                 {labCost.items.length === 0
