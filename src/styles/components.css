@@ -23,12 +23,12 @@
 
 /* ===== HEADER ===== */
 .header {
-  height: var(--header-height);
+  height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
   background: var(--ek-soil-dark);
   color: var(--ek-root);
   display: flex;
   align-items: center;
-  padding: 0 var(--space-4);
+  padding: env(safe-area-inset-top, 0px) var(--space-4) 0;
   gap: var(--space-3);
   flex-shrink: 0;
   border-bottom: 1px solid oklch(0% 0 0 / 0.35);
@@ -903,7 +903,7 @@ input[type="number"] {
   .stat .stat-value { font-size: 2.4rem; }
   .stat .stat-label { font-size: 0.75rem; }
 
-  .header { height: 56px; padding: 0 var(--space-4); }
+  .header { height: calc(56px + env(safe-area-inset-top, 0px)); padding: env(safe-area-inset-top, 0px) var(--space-4) 0; }
   .header-title { font-size: 0.92rem; }
 
   .data-table tbody tr:hover { background: transparent; }
